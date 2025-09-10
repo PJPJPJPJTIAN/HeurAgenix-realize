@@ -31,13 +31,17 @@ class ProblemStateGenerator:
     def generate_problem_state(self, smoke_test: bool=False, max_try_times: int=5) -> str:
         # 调用llm_client的load_background方法加载无代码的背景信息（问题描述等），返回包含背景信息的字典
         prompt_dict = self.llm_client.load_background(self.problem, "background_without_code")
+        
         # 搜索当前问题的problem_state_description.txt文件路径，该文件描述问题状态的格式要求
         problem_state_description_file = search_file("problem_state_description.txt", problem=self.problem)
+       
         # 断言文件存在，若不存在则抛出异常提示
         assert problem_state_description_file is not None, f"Problem state description file {problem_state_description_file} does not exist"
         # 读取文件内容并解析为字典，获取问题状态描述的具体内容
         problem_state_description = parse_text_to_dict(open(problem_state_description_file).read())
+        
 
+    
         # 从解析后的字典中提取实例数据介绍，存入prompt_dict供后续生成提示使用
         prompt_dict["instance_data_introduction"] = problem_state_description["instance_data"]
         # 处理key_item，提取关键项名称（去除特殊字符和空格）
