@@ -1,0 +1,303 @@
+user
+I am working on Hyper-heuristics for Combinatorial Operation (CO) problem.
+
+Currently, I am working on tsp problem:
+Traveling Salesman Problem (TSP) is the challenge of finding the shortest possible route that visits a given list of cities exactly once and returns to the origin city, based on the distances between each pair of cities.
+
+To support different heuristic algorithms, I build the Solution and Operator framework.
+The Solution is designed as:
+class Solution:
+    """The solution of TSP.
+A list of integers where each integer represents a node (city) in the TSP tour.
+The order of the nodes in the list defines the order in which the cities are visited in the tour."""
+    def __init__(self, tour: list[int]):
+        self.tour = tour
+Operator servers as a mechanism to modify solution, which enables the application of heuristic algorithms. 
+To support heuristic algorithm, we have build the following operators:
+class AppendOperator(BaseOperator):
+    """Append the node at the end of the solution."""
+    def __init__(self, node: int):
+        self.node = node
+    def run(self, solution: Solution) -> Solution:
+        new_tour = solution.tour + [self.node]
+        return Solution(new_tour)
+class InsertOperator(BaseOperator):
+    """Insert the node into the solution at the target position."""
+    def __init__(self, node: int, position: int):
+        self.node = node
+        self.position = position
+    def run(self, solution: Solution) -> Solution:
+        new_tour = solution.tour[:self.position] + [self.node] + solution.tour[self.position:]
+        return Solution(new_tour)
+class SwapOperator(BaseOperator):
+    """Swap two nodes in the solution. swap_node_pairs is a list of tuples, each containing the two nodes to swap."""
+    def __init__(self, swap_node_pairs: list[tuple[int, int]]):
+        self.swap_node_pairs = swap_node_pairs
+    def run(self, solution: Solution) -> Solution:
+        node_to_index = {node: index for index, node in enumerate(solution.tour)}
+        new_tour = solution.tour.copy()
+        for node_a, node_b in self.swap_node_pairs:
+            index_a = node_to_index.get(node_a)
+            index_b = node_to_index.get(node_b)
+            assert index_a is not None
+            assert index_b is not None
+            new_tour[index_a], new_tour[index_b] = (new_tour[index_b], new_tour[index_a])
+        return Solution(new_tour)
+class ReplaceOperator(BaseOperator):
+    """Replace a node with another one in the solution."""
+    def __init__(self, node: int, new_node: int):
+        self.node = node
+        self.new_node = new_node
+    def run(self, solution: Solution) -> Solution:
+        index = solution.tour.index(self.node)
+        new_tour = solution.tour[:index] + [self.new_node] + solution.tour[index + 1:]
+        return Solution(new_tour)
+class ReverseSegmentOperator(BaseOperator):
+    """Reverse multiple segments of indices in the solution."""
+    def __init__(self, segments: list[tuple[int, int]]):
+        self.segments = segments
+    def run(self, solution: Solution) -> Solution:
+        new_tour = solution.tour[:]
+        for segment in self.segments:
+            start_index, end_index = segment
+            assert 0 <= start_index < len(new_tour)
+            assert 0 <= end_index < len(new_tour)
+            if start_index <= end_index:
+                new_tour[start_index:end_index + 1] = reversed(new_tour[start_index:end_index + 1])
+            else:
+                new_tour = list(reversed(new_tour[start_index:])) + new_tour[end_index + 1:start_index] + list(reversed(new_tour[:end_index + 1]))
+        return Solution(new_tour)
+
+In pursuit of augmenting our heuristic algorithmic suite, we require the following standardized heuristic function signature:
+def heuristic(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[TargetOperatorType, dict]:
+The inputs are:
+problem_state (dict): The dictionary contains the problem state with:
+    - node_num (int): The total number of nodes in the problem.
+    - distance_matrix (numpy.ndarray): A 2D array representing the distances between nodes.
+    - current_solution (Solution): Current solution instance.
+    - current_cost (int): The total cost of the current solution.
+    - get_problem_state (callable): def validation_solution(solution: Solution) -> bool: The function to get the problem state for given solution without modify it.
+    - validation_solution (callable): def validation_solution(solution: Solution) -> bool: The function to check whether the solution is valid.
+    - average_distance (float): The average distance between all pairs of nodes.
+    - min_distance (float): The minimum non-zero distance between any two nodes.
+    - max_distance (float): The maximum distance between any two nodes.
+    - std_dev_distance (float): The standard deviation of the distances.
+    - density (float): The density of the graph, calculated as the ratio of non-zero distances to possible edges.
+    - centroid (int): The node index that has the smallest sum of distances to all other nodes.
+    - visited_nodes (list[int]): The list of visited node IDs.
+    - unvisited_nodes (list[int]): The list of unvisited node IDs.
+    - last_visited (int): The ID of the last visited node.
+    - current_path_length (int): The number of nodes in the current path.
+    - remaining_nodes (int): The number of nodes that remain unvisited.
+    - average_edge_cost (float): The average cost per edge in the current solution.
+    - last_edge_cost (float): The cost of the last edge added to the current solution.
+    - std_dev_edge_cost (float): The standard deviation of edge costs in the current solution.
+    - min_edge_cost_remaining (float): The minimum edge cost to any unvisited node from the last visited node.
+    - max_edge_cost_remaining (float): The maximum edge cost to any unvisited node from the last visited node.
+
+algorithm_data(dict): Algorithm data contains the data that necessary for some algorithms.
+Other hyper-parameters in kwargs.
+The outputs includes the operator that must be an instance of a predefined target operator type and updated algorithm dict, which contains new information for future work for both this or other algorithm.
+
+Please consider is tsp a combinatorial operation problem and can be solved by heuristics?
+If you think this problem is not a combinatorial operation problem or the solution, operator, data are incorrect, response ***is_cop:no*** to me, or response ***is_cop:yes***.
+
+The response format is very important. For better communication, please respond to me in this format:
+***is_cop:yes/no***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***is_cop:yes***
+
+The Traveling Salesman Problem (TSP) is indeed a classic combinatorial optimization problem. It involves finding the optimal ordering/permutation of cities to visit, which perfectly fits the definition of combinatorial optimization. Your framework with Solution objects representing tours and Operator objects that modify these tours through various combinatorial operations (insertion, swapping, reversal, etc.) is well-designed for applying heuristic algorithms to TSP. The problem state provides comprehensive information about both the problem instance and current solution state, enabling sophisticated heuristic decision-making.
+------------------------------------------------------------------------------------
+
+user
+I need your help to implement some basic heuristic for this problem tsp.
+
+The problem will work on following data.
+Please try to understand the data and generate based on them, especially setting the default value for hyper-parameters:
+All data is possible
+
+The response format is very important. For better communication, please respond to me in this format:
+***heuristic:
+heuristic_name: description
+heuristic_name: description
+....
+***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+Based on the TSP problem structure and the comprehensive problem state data provided, here are several fundamental heuristics that can be implemented:
+
+***heuristic:
+nearest_neighbor: Selects the closest unvisited node from the last visited node using the distance matrix. Returns an AppendOperator with the selected node.
+greedy_insertion: Finds the position in the current tour where inserting an unvisited node causes the smallest increase in total distance. Returns an InsertOperator with the best node and position.
+two_opt: Identifies two edges that, when swapped, would reduce the tour length. Returns a ReverseSegmentOperator for the identified segment.
+node_swap: Swaps two nodes in the tour if it improves the solution cost. Returns a SwapOperator with the best node pair.
+cheapest_insertion: Similar to greedy insertion but considers both the cost to insert and the node's proximity to other nodes. Returns an InsertOperator.
+farthest_insertion: Inserts the node that is farthest from the current tour at its optimal position. Returns an InsertOperator.
+random_insertion: Randomly selects an unvisited node and inserts it at the best position. Returns an InsertOperator.
+***
+------------------------------------------------------------------------------------
+
+user
+Based on previous discuss, we get the heuristic random_insertion:
+ Randomly selects an unvisited node and inserts it at the best position. Returns an InsertOperator.
+
+Now please implement it in python function random_insertion_1840.
+
+To implement this heuristic function in python, please note:
+1. We can assume that Solution and all Operators are imported.
+2. The operator type must be defined previously, do not create a new one in your code.
+3. Never modify the data in problem_state.
+4. All hyper parameters in kwargs should be set a default value.
+5. Any reasonable partial solution may be used as input, such as an empty solution.
+6. Comments in the code are very important. They must clearly explain which hyper-parameters are required by the algorithm (i.e., the parameters in **kwargs), how the algorithm proceeds, and under what circumstances it will not return any operator or will return an empty operator. We hope that people can understand the principles and workflow of the algorithm clearly just by reading the comments, without needing to look at the code.
+7. The name of function must be random_insertion_1840. The TargetOperatorType should be replaced by real returned operator type.
+8. No any omissions or placeholders, I'm just going to use the code.
+9. For the algorithm to update the algorithm_data, do not modify directly "algorithm_data["abc"] = 123", we should return operator, {"abc": 123}.For algorithm that do not update them, just return operator, {}
+10. For the circumstances that algorithm return empty operator, please return None, {}.
+11. Do not forget to check whether the content is empty when calculating the min/max/average/std/..., such as when using min([distance[node][other] for other in nodes if other != node]).
+12. Make the result must be valid.
+13. Do not forget the input problem_state:
+{problem_state_introduction}
+
+For tsp problem, take about following:
+1. Consider empty solution as input (no last_visited).
+2. Make sure solution is valid, such as: no-revisited.
+
+The problem will work on following data.
+Please try to understand the data and generate based on them, especially setting the default value for hyper-parameters:
+All data is possible
+
+The response format is very important. For better communication, please respond to me in this format:
+***python_code:
+from src.problems.tsp.components import *
+import other_library (if necessary)
+def random_insertion_1840(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[TargetOperatorType, dict]:
+    """ Description for this heuristic algorithm.
+
+    Args:
+        problem_state (dict): The dictionary contains the problem state.. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no algorithm data) algorithm_data (dict): The algorithm dictionary for current algorithm only. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no hyper parameters data) introduction for hyper parameters in kwargs if used.
+
+    Returns:
+        Description of this operator.
+        Description of updated algorithm data.
+
+        ...
+    """
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+
+------------------------------------------------------------------------------------
+
+assistant
+***python_code:
+from src.problems.tsp.components import *
+import random
+import numpy as np
+
+def random_insertion_1840(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[InsertOperator, dict]:
+    """Random Insertion Heuristic for TSP.
+    
+    This heuristic randomly selects an unvisited node and finds the optimal position
+    to insert it into the current tour that minimizes the increase in total distance.
+    
+    Args:
+        problem_state (dict): The dictionary contains the problem state. In this algorithm, the following items are necessary:
+            - unvisited_nodes (list[int]): List of nodes not yet in the solution
+            - current_solution (Solution): Current partial tour solution
+            - distance_matrix (numpy.ndarray): Distance matrix between nodes
+            - last_visited (int): Last node in the current tour (optional, may be None for empty solution)
+        algorithm_data (dict): Not used in this algorithm, maintained for interface consistency
+        **kwargs: Hyper-parameters for the algorithm:
+            - random_seed (int, default=None): Seed for random number generation for reproducibility
+    
+    Returns:
+        InsertOperator: Operator to insert the selected node at the optimal position, or None if no unvisited nodes
+        dict: Empty dictionary as no algorithm data is updated
+    
+    The algorithm proceeds as follows:
+    1. Check if there are unvisited nodes available
+    2. Randomly select one unvisited node
+    3. For each possible insertion position in the current tour, calculate the cost increase
+    4. Select the position that minimizes the insertion cost
+    5. Return InsertOperator with the selected node and optimal position
+    
+    Returns None if:
+    - No unvisited nodes remain
+    - Current solution is empty (special case handled by inserting as first node)
+    """
+    
+    # Set default hyper-parameters
+    random_seed = kwargs.get('random_seed', None)
+    if random_seed is not None:
+        random.seed(random_seed)
+    
+    # Extract necessary problem state information
+    unvisited_nodes = problem_state['unvisited_nodes']
+    current_solution = problem_state['current_solution']
+    distance_matrix = problem_state['distance_matrix']
+    last_visited = problem_state.get('last_visited', None)
+    
+    # Check if there are unvisited nodes
+    if not unvisited_nodes:
+        return None, {}
+    
+    # Randomly select an unvisited node
+    selected_node = random.choice(unvisited_nodes)
+    
+    current_tour = current_solution.tour
+    n = len(current_tour)
+    
+    # Handle empty solution case
+    if n == 0:
+        # For empty solution, just insert the node
+        return InsertOperator(selected_node, 0), {}
+    
+    # Handle single-node solution case
+    if n == 1:
+        # Calculate cost of inserting after the only node
+        cost_after = distance_matrix[current_tour[0], selected_node] + distance_matrix[selected_node, current_tour[0]]
+        return InsertOperator(selected_node, 1), {}
+    
+    # Find optimal insertion position for non-empty tours
+    min_cost_increase = float('inf')
+    best_position = 0
+    
+    # Evaluate all possible insertion positions
+    for i in range(n + 1):
+        if i == 0:  # Insert at beginning
+            cost_increase = (distance_matrix[selected_node, current_tour[0]] + 
+                           distance_matrix[selected_node, current_tour[-1]] - 
+                           distance_matrix[current_tour[-1], current_tour[0]])
+        elif i == n:  # Insert at end
+            cost_increase = (distance_matrix[current_tour[-1], selected_node] + 
+                           distance_matrix[selected_node, current_tour[0]] - 
+                           distance_matrix[current_tour[-1], current_tour[0]])
+        else:  # Insert between two nodes
+            cost_increase = (distance_matrix[current_tour[i-1], selected_node] + 
+                           distance_matrix[selected_node, current_tour[i]] - 
+                           distance_matrix[current_tour[i-1], current_tour[i]])
+        
+        if cost_increase < min_cost_increase:
+            min_cost_increase = cost_increase
+            best_position = i
+    
+    return InsertOperator(selected_node, best_position), {}
+***
+------------------------------------------------------------------------------------
+
