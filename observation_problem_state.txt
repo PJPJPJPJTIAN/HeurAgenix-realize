@@ -71,7 +71,8 @@ The input is instance_data
 - node_num (int): The total number of nodes in the problem.
     - distance_matrix (numpy.ndarray): A 2D array representing the distances between nodes.
 
-The output is algo a dict, which contains the following problem states as keys: number_of_nodes,distance_matrix_mean,distance_matrix_std,distance_matrix_skewness,distance_matrix_kurtosis,centroid_x,centroid_y,std_x,std_y,correlation_xy,min_distance,max_distance,area_bbox.
+The output is algo a dict, which contains the following problem states as keys: number_of_nodes,distance_matrix_mean,distance_matrix_std,distance_matrix_skewness,
+distance_matrix_kurtosis,centroid_x,centroid_y,std_x,std_y,correlation_xy,min_distance,max_distance,area_bbox.
 
 Please note:
 1. Never modify the instance_data.
@@ -202,7 +203,8 @@ def get_instance_problem_state(instance_data: dict) -> dict:
 ------------------------------------------------------------------------------------
 
 user
-Now, we aim to collaboratively create the functions to generate some problem states(statistics data), which captures the high-level features of current (partial) solution for the tsp.
+Now, we aim to collaboratively create the functions to generate some problem states(statistics data), which captures the high-level 
+features of current (partial) solution for the tsp.
 
 These functions will be underpinned by rigorous statistical analysis and domain-specific knowledge, ensuring they are both accurate and relevant.
 
@@ -210,7 +212,8 @@ These functions will be underpinned by rigorous statistical analysis and domain-
 In determining the optimal problem states to represent instance, we must adhere to the following criteria:
 1. The data representation should be succinct to minimize computational load while retaining sufficient granularity to recognize the solution feature.
 2. It must incorporate unique attributes that aid in the clear distinction between different solution stage.
-3. We need to evaluate the current status from multiple dimensions, including the current progress of the solution, the quality of the solution, the status of the remaining data, etc.
+3. We need to evaluate the current status from multiple dimensions, including the current progress of the solution, the quality of the solution, 
+the status of the remaining data, etc.
 4. The most important, these data relates to both instance and current solution, and will update during the problem solving process.
 
 Now, please tell me which statistical data are best serve as solution problem state.
@@ -440,7 +443,9 @@ def get_observation_problem_state(solution_problem_state: dict) -> dict:
 
 The input is solution_problem_state.
 
-The output is algo a dict, which contains the following problem states as keys: current_tour_length,percentage_completed,remaining_nodes_count,min_distance_to_remaining,nearest_neighbor_ratio,current_to_start_distance,connectivity_ratio,tour_completion_estimate.
+The output is algo a dict, which contains the following problem states as keys: current_tour_length,percentage_completed,
+remaining_nodes_count,min_distance_to_remaining,
+nearest_neighbor_ratio,current_to_start_distance,connectivity_ratio,tour_completion_estimate.
 
 Please note:
 1. Just take it from solution_problem_state without modify it.
@@ -502,4 +507,5 @@ def get_observation_problem_state(solution_problem_state: dict) -> dict:
     }
 ***
 ------------------------------------------------------------------------------------
+
 
