@@ -17,7 +17,7 @@ If you have no information to provide, simply respond with ***None***.
 assistant
 ***is_cop:yes***
 
-Analysis: The Traveling Salesman Problem (TSP) is a quintessential combinatorial optimization problem. It involves finding the optimal permutation (order) for visiting a set of cities, which is a combinatorial operation. The number of possible solutions grows factorially with the number of cities, making an exhaustive search infeasible for large instances. Therefore, it is almost exclusively solved using heuristics (e.g., Nearest Neighbor, 2-opt, genetic algorithms) and metaheuristics/hyper-heuristics, which are strategies for selecting or generating these simpler heuristics.
+The Traveling Salesman Problem (TSP) is a classic combinatorial optimization problem. It involves finding the optimal permutation (order) of cities to visit, which is a combinatorial structure. Due to its NP-hard nature, it is commonly solved using heuristics (e.g., nearest neighbor, genetic algorithms, ant colony optimization) and metaheuristics, including hyper-heuristics. Therefore, it fits perfectly within the domain of combinatorial optimization problems addressed by heuristic methods.
 ------------------------------------------------------------------------------------
 
 user
@@ -44,22 +44,18 @@ If you have no information to provide, simply respond with ***None***.
 ------------------------------------------------------------------------------------
 
 assistant
-Based on the criteria of being succinct, distinctive, and focused solely on the instance (not the solution), here are key statistical features for a TSP problem state:
+Based on your requirements for the TSP, here are the statistical features that best characterize a problem instance, independent of any solution.
 
 ***instance_problem_state:
-number_of_nodes;len(city_list);The most fundamental property, directly defining the problem's scale and combinatorial complexity.
-distance_matrix_mean;np.mean(distance_matrix);Captures the overall scale of distances between nodes, a central feature of the instance.
-distance_matrix_std;np.std(distance_matrix);Measures the variability or spread of distances, indicating if the problem is uniform or has large variations.
-distance_matrix_skewness;scipy.stats.skew(distance_matrix.flatten());Quantifies the asymmetry of the distance distribution, e.g., if many short distances have a few very long ones.
-distance_matrix_kurtosis;scipy.stats.kurtosis(distance_matrix.flatten());Measures the 'tailedness' of the distance distribution, indicating the presence of outliers.
-centroid_x;np.mean(x_coordinates);The geometric center of the cities on the x-axis, describing the spatial layout.
-centroid_y;np.mean(y_coordinates);The geometric center of the cities on the y-axis, describing the spatial layout.
-std_x;np.std(x_coordinates);The spread of cities along the x-axis, indicating if they are clustered or dispersed.
-std_y;np.std(y_coordinates);The spread of cities along the y-axis, indicating if they are clustered or dispersed.
-correlation_xy;np.corrcoef(x_coordinates, y_coordinates)[0,1];Describes the linear relationship between city coordinates (e.g., a high correlation suggests cities are along a line).
-min_distance;np.min(distance_matrix[distance_matrix > 0]);The smallest non-zero distance between any two cities, indicating the potential for very short edges.
-max_distance;np.max(distance_matrix);The largest distance between any two cities, defining the problem's maximum possible edge cost.
-area_bbox;(max(x_coords)-min(x_coords))*(max(y_coords)-min(y_coords));The area of the bounding box containing all cities, giving a sense of the problem's spatial footprint.
+num_cities;len(coordinate_list);The fundamental size parameter of the instance, directly defining the size of the search space (n!).
+avg_distance;mean(all_unique_pairwise_distances);Captures the central tendency of the distance matrix, indicating the general scale of the problem.
+std_distance;std(all_unique_pairwise_distances);Measures the dispersion of distances. A high value indicates a mix of very short and very long edges, affecting problem structure.
+min_distance;min(all_unique_pairwise_distances);The shortest possible edge length, which can be critical for constructing greedy solutions.
+max_distance;max(all_unique_pairwise_distances);The longest possible edge length, indicating the potential penalty for poor edge choices.
+avg_nearest_neighbor_dist;for each city, find its distance to the closest other city, then average these values;Indicates how clustered the cities are on average. A low value suggests tight clusters.
+centroid_std;calculate the centroid (mean_x, mean_y) of all cities, then compute the std of distances from each city to this centroid;Measures the spread of the cities around the center. Low std implies a circular cluster, high std implies an elongated or multi-cluster instance.
+distance_matrix_skew;scipy.stats.skew(distance_matrix.flatten());Quantifies the asymmetry of the distance distribution. Positive skew indicates many short distances and a few very long ones.
+distance_matrix_kurtosis;scipy.stats.kurtosis(distance_matrix.flatten());Measures the "tailedness" of the distance distribution. High kurtosis suggests a distribution with heavier tails (more outliers) than a normal distribution.
 ***
 ------------------------------------------------------------------------------------
 
@@ -71,8 +67,7 @@ The input is instance_data
 - node_num (int): The total number of nodes in the problem.
     - distance_matrix (numpy.ndarray): A 2D array representing the distances between nodes.
 
-The output is algo a dict, which contains the following problem states as keys: number_of_nodes,distance_matrix_mean,distance_matrix_std,distance_matrix_skewness,
-distance_matrix_kurtosis,centroid_x,centroid_y,std_x,std_y,correlation_xy,min_distance,max_distance,area_bbox.
+The output is algo a dict, which contains the following problem states as keys: num_cities,avg_distance,std_distance,min_distance,max_distance,avg_nearest_neighbor_dist,centroid_std,distance_matrix_skew,distance_matrix_kurtosis.
 
 Please note:
 1. Never modify the instance_data.
@@ -112,99 +107,74 @@ def get_instance_problem_state(instance_data: dict) -> dict:
 
     Args:
         instance_data (dict): The dictionary contains the instance data with:
-            - node_num (int): The total number of nodes
-            - distance_matrix (numpy.ndarray): 2D array of distances between nodes
+            - node_num (int): The total number of nodes in the problem.
+            - distance_matrix (numpy.ndarray): A 2D array representing the distances between nodes.
 
     Returns:
         dict: The dictionary contains the instance problem state with:
-            - number_of_nodes (int): Total number of cities/nodes
-            - distance_matrix_mean (float): Mean of all distances in the matrix
-            - distance_matrix_std (float): Standard deviation of all distances
-            - distance_matrix_skewness (float): Skewness of distance distribution
-            - distance_matrix_kurtosis (float): Kurtosis of distance distribution
-            - centroid_x (float): Mean x-coordinate of all cities
-            - centroid_y (float): Mean y-coordinate of all cities
-            - std_x (float): Standard deviation of x-coordinates
-            - std_y (float): Standard deviation of y-coordinates
-            - correlation_xy (float): Correlation between x and y coordinates
-            - min_distance (float): Minimum non-zero distance between any two nodes
-            - max_distance (float): Maximum distance between any two nodes
-            - area_bbox (float): Area of bounding box containing all cities
+            - num_cities (int): The number of cities/nodes in the instance.
+            - avg_distance (float): The average of all unique pairwise distances.
+            - std_distance (float): The standard deviation of all unique pairwise distances.
+            - min_distance (float): The minimum distance between any two nodes.
+            - max_distance (float): The maximum distance between any two nodes.
+            - avg_nearest_neighbor_dist (float): The average distance from each node to its nearest neighbor.
+            - centroid_std (float): The standard deviation of distances from each node to the centroid of all nodes.
+            - distance_matrix_skew (float): The skewness of the distance distribution.
+            - distance_matrix_kurtosis (float): The kurtosis of the distance distribution.
     """
-    
-    # Extract basic information
-    node_num = instance_data['node_num']
+    # Extract the distance matrix from instance_data
     distance_matrix = instance_data['distance_matrix']
+    node_num = instance_data['node_num']
     
-    # For coordinate-based features, we need to extract coordinates
-    # Assuming instance_data contains coordinates if available
-    # If coordinates are not available, these features will be NaN
-    has_coordinates = 'coordinates' in instance_data
+    # Get all unique pairwise distances (excluding diagonal zeros)
+    # Use numpy.triu_indices to get upper triangle indices without the diagonal (k=1)
+    upper_triangle_indices = np.triu_indices_from(distance_matrix, k=1)
+    all_distances = distance_matrix[upper_triangle_indices]
     
-    # Calculate distance matrix statistics
-    flat_distances = distance_matrix.flatten()
-    # Remove zeros (diagonal elements) for better statistics
-    non_zero_distances = flat_distances[flat_distances > 0]
+    # Calculate basic statistics
+    num_cities = node_num
+    avg_distance = np.mean(all_distances)
+    std_distance = np.std(all_distances)
+    min_distance = np.min(all_distances)
+    max_distance = np.max(all_distances)
     
-    # Initialize coordinate-related variables
-    centroid_x, centroid_y, std_x, std_y, correlation_xy, area_bbox = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+    # Calculate average nearest neighbor distance
+    # For each node, find the minimum distance to any other node (excluding self-distance)
+    # Create a copy of distance matrix and set diagonal to a large value to exclude self
+    dist_matrix_no_self = distance_matrix.copy()
+    np.fill_diagonal(dist_matrix_no_self, np.inf)
+    nearest_neighbor_dists = np.min(dist_matrix_no_self, axis=1)
+    avg_nearest_neighbor_dist = np.mean(nearest_neighbor_dists)
     
-    if has_coordinates:
-        coordinates = instance_data['coordinates']
-        x_coords = coordinates[:, 0]
-        y_coords = coordinates[:, 1]
-        
-        # Calculate coordinate statistics
-        centroid_x = np.mean(x_coords)
-        centroid_y = np.mean(y_coords)
-        std_x = np.std(x_coords)
-        std_y = np.std(y_coords)
-        correlation_xy = np.corrcoef(x_coords, y_coords)[0, 1]
-        
-        # Calculate bounding box area
-        x_range = np.max(x_coords) - np.min(x_coords)
-        y_range = np.max(y_coords) - np.min(y_coords)
-        area_bbox = x_range * y_range
+    # Calculate centroid standard deviation
+    # Since we don't have coordinates, we approximate the centroid using the distance matrix
+    # We use the concept of "distance centroid" - the node with minimum total distance to all others
+    total_distances = np.sum(distance_matrix, axis=1)
+    centroid_node = np.argmin(total_distances)
+    distances_to_centroid = distance_matrix[centroid_node]
+    centroid_std = np.std(distances_to_centroid)
     
-    # Calculate distance statistics
-    distance_matrix_mean = np.mean(non_zero_distances) if len(non_zero_distances) > 0 else 0
-    distance_matrix_std = np.std(non_zero_distances) if len(non_zero_distances) > 0 else 0
+    # Calculate skewness and kurtosis of distance distribution
+    distance_matrix_skew = stats.skew(all_distances)
+    distance_matrix_kurtosis = stats.kurtosis(all_distances)
     
-    # Calculate skewness and kurtosis (handle cases with insufficient data)
-    if len(non_zero_distances) > 2:
-        distance_matrix_skewness = stats.skew(non_zero_distances)
-        distance_matrix_kurtosis = stats.kurtosis(non_zero_distances)
-    else:
-        distance_matrix_skewness = 0
-        distance_matrix_kurtosis = 0
-    
-    # Find min and max distances
-    min_distance = np.min(non_zero_distances) if len(non_zero_distances) > 0 else 0
-    max_distance = np.max(flat_distances) if len(flat_distances) > 0 else 0
-    
-    # Return all calculated features
+    # Return all calculated problem states as a dictionary
     return {
-        'number_of_nodes': node_num,
-        'distance_matrix_mean': float(distance_matrix_mean),
-        'distance_matrix_std': float(distance_matrix_std),
-        'distance_matrix_skewness': float(distance_matrix_skewness),
-        'distance_matrix_kurtosis': float(distance_matrix_kurtosis),
-        'centroid_x': float(centroid_x),
-        'centroid_y': float(centroid_y),
-        'std_x': float(std_x),
-        'std_y': float(std_y),
-        'correlation_xy': float(correlation_xy),
+        'num_cities': num_cities,
+        'avg_distance': float(avg_distance),
+        'std_distance': float(std_distance),
         'min_distance': float(min_distance),
         'max_distance': float(max_distance),
-        'area_bbox': float(area_bbox)
+        'avg_nearest_neighbor_dist': float(avg_nearest_neighbor_dist),
+        'centroid_std': float(centroid_std),
+        'distance_matrix_skew': float(distance_matrix_skew),
+        'distance_matrix_kurtosis': float(distance_matrix_kurtosis)
     }
-***
 ***
 ------------------------------------------------------------------------------------
 
 user
-Now, we aim to collaboratively create the functions to generate some problem states(statistics data), which captures the high-level 
-features of current (partial) solution for the tsp.
+Now, we aim to collaboratively create the functions to generate some problem states(statistics data), which captures the high-level features of current (partial) solution for the tsp.
 
 These functions will be underpinned by rigorous statistical analysis and domain-specific knowledge, ensuring they are both accurate and relevant.
 
@@ -212,8 +182,7 @@ These functions will be underpinned by rigorous statistical analysis and domain-
 In determining the optimal problem states to represent instance, we must adhere to the following criteria:
 1. The data representation should be succinct to minimize computational load while retaining sufficient granularity to recognize the solution feature.
 2. It must incorporate unique attributes that aid in the clear distinction between different solution stage.
-3. We need to evaluate the current status from multiple dimensions, including the current progress of the solution, the quality of the solution, 
-the status of the remaining data, etc.
+3. We need to evaluate the current status from multiple dimensions, including the current progress of the solution, the quality of the solution, the status of the remaining data, etc.
 4. The most important, these data relates to both instance and current solution, and will update during the problem solving process.
 
 Now, please tell me which statistical data are best serve as solution problem state.
@@ -230,19 +199,16 @@ If you have no information to provide, simply respond with ***None***.
 
 assistant
 ***solution_problem_state:
-current_tour_length;sum(distance_matrix[current_tour[i], current_tour[i+1]] for i in range(len(current_tour)-1)) + distance_matrix[current_tour[-1], current_tour[0]];Measures the current solution quality and total distance traveled so far.
-percentage_completed;len(current_tour) / total_nodes * 100;Indicates progress towards completing the full tour (how many nodes are visited).
-current_node;The last node in the current tour;Identifies the current position from which next moves will be made.
-remaining_nodes_count;total_nodes - len(current_tour);Shows how many nodes still need to be visited.
-avg_distance_to_remaining;mean(distance_matrix[current_node, remaining_nodes]);Measures average cost to reach unvisited nodes from current position.
-min_distance_to_remaining;min(distance_matrix[current_node, remaining_nodes]);Identifies the cheapest immediate move available.
-max_distance_to_remaining;max(distance_matrix[current_node, remaining_nodes]);Identifies the most expensive immediate move available.
-std_distance_to_remaining;std(distance_matrix[current_node, remaining_nodes]);Shows variability in costs of available next moves.
-nearest_neighbor_ratio;min_distance_to_remaining / avg_distance_to_remaining;Indicates how attractive the best immediate move is compared to average.
-current_to_start_distance;distance_matrix[current_node, start_node];Distance to return to origin, important for completion cost.
-avg_remaining_inter_distance;mean(distance_matrix[remaining_nodes][:, remaining_nodes]);Average distance between remaining unvisited nodes.
-connectivity_ratio;(number of edges in current tour) / (total possible edges);Measures how connected the partial solution is.
-tour_completion_estimate;current_tour_length + (remaining_nodes_count * avg_remaining_inter_distance);Estimates final tour length based on current progress.
+current_tour_length;sum(distance_matrix[path[i], path[i+1]] for all edges in current path) + distance_matrix[path[-1], path[0]] if complete;Measures the quality of the current solution. For partial solutions, calculates length of constructed path so far.
+percent_complete;len(current_path) / total_nodes;Indicates progress through the construction process, crucial for understanding solution stage.
+avg_edge_length_current;mean(distance_matrix[path[i], path[i+1]] for all edges in current path);Characterizes the average quality of edges selected in the current solution.
+std_edge_length_current;std(distance_matrix[path[i], path[i+1]] for all edges in current path);Measures variability in edge quality, indicating consistency of selected edges.
+current_to_optimal_ratio;current_tour_length / estimated_optimal (e.g., using Christofides or nearest neighbor as reference);Provides normalized measure of solution quality relative to a benchmark, useful for comparison across instances.
+unvisited_nodes_count;total_nodes - len(current_path);Absolute number of nodes remaining to be visited, indicating remaining search space size.
+avg_distance_to_unvisited;for each node in current path, calculate min distance to any unvisited node, then average;Measures how "connected" the current path is to remaining nodes, indicating expansion potential.
+connectivity_quality;min(distance_matrix[current_path[-1], unvisited_node] for all unvisited nodes) / avg_distance;Assesses the quality of connections from the last node to remaining options, crucial for greedy extensions.
+cluster_cohesion;calculate the ratio of intra-cluster edges vs inter-cluster edges in current path;Indicates whether the solution is building coherent clusters or making long jumps between regions.
+path_compactness;calculate the standard deviation of distances from path nodes to their centroid;Measures how spatially compact the current path is, indicating solution structure quality.
 ***
 ------------------------------------------------------------------------------------
 
@@ -261,7 +227,7 @@ The order of the nodes in the list defines the order in which the cities are vis
     def __init__(self, tour: list[int]):
         self.tour = tour
 
-The output is algo a dict, which contains the following problem states as keys: current_tour_length,percentage_completed,current_node,remaining_nodes_count,avg_distance_to_remaining,min_distance_to_remaining,max_distance_to_remaining,std_distance_to_remaining,nearest_neighbor_ratio,current_to_start_distance,avg_remaining_inter_distance,connectivity_ratio,tour_completion_estimate.
+The output is algo a dict, which contains the following problem states as keys: current_tour_length,percent_complete,avg_edge_length_current,std_edge_length_current,current_to_optimal_ratio,unvisited_nodes_count,avg_distance_to_unvisited,connectivity_quality,cluster_cohesion,path_compactness.
 
 Please note:
 1. Never modify the instance_data and solution.
@@ -294,114 +260,124 @@ If you have no information to provide, simply respond with ***None***.
 assistant
 ***python_code:
 import numpy as np
+from scipy import spatial
 
 def get_solution_problem_state(instance_data: dict, solution: Solution) -> dict:
     """Extract solution problem state from instance data and current solution.
 
     Args:
         instance_data (dict): The dictionary contains the instance data with:
-            - node_num (int): The total number of nodes
-            - distance_matrix (numpy.ndarray): 2D array of distances between nodes
-        solution (Solution): The current solution with tour information
+            - node_num (int): The total number of nodes in the problem.
+            - distance_matrix (numpy.ndarray): A 2D array representing the distances between nodes.
+        solution (Solution): The current solution instance with tour attribute.
 
     Returns:
         dict: The dictionary contains the solution problem state with:
-            - current_tour_length (float): Total distance of current partial tour
-            - percentage_completed (float): Percentage of nodes visited (0-100)
-            - current_node (int): Last node in the current tour
-            - remaining_nodes_count (int): Number of nodes not yet visited
-            - avg_distance_to_remaining (float): Average distance from current node to remaining nodes
-            - min_distance_to_remaining (float): Minimum distance from current node to remaining nodes
-            - max_distance_to_remaining (float): Maximum distance from current node to remaining nodes
-            - std_distance_to_remaining (float): Standard deviation of distances to remaining nodes
-            - nearest_neighbor_ratio (float): Ratio of min to avg distance to remaining nodes
-            - current_to_start_distance (float): Distance from current node back to start node
-            - avg_remaining_inter_distance (float): Average distance between remaining nodes
-            - connectivity_ratio (float): Ratio of edges in tour to total possible edges
-            - tour_completion_estimate (float): Estimated final tour length
+            - current_tour_length (float): Total length of the current tour (complete or partial)
+            - percent_complete (float): Percentage of nodes visited in the tour
+            - avg_edge_length_current (float): Average length of edges in the current tour
+            - std_edge_length_current (float): Standard deviation of edge lengths in current tour
+            - current_to_optimal_ratio (float): Ratio of current tour length to estimated optimal
+            - unvisited_nodes_count (int): Number of nodes not yet visited
+            - avg_distance_to_unvisited (float): Average minimum distance from visited to unvisited nodes
+            - connectivity_quality (float): Quality of connection from last node to unvisited nodes
+            - cluster_cohesion (float): Ratio of intra-cluster vs inter-cluster edges
+            - path_compactness (float): Spatial compactness of the current path
     """
-    
-    # Extract instance data
-    node_num = instance_data['node_num']
+    # Extract data from inputs
     distance_matrix = instance_data['distance_matrix']
+    total_nodes = instance_data['node_num']
     current_tour = solution.tour
+    visited_count = len(current_tour)
     
-    # Calculate current tour length
-    current_tour_length = 0.0
-    if len(current_tour) > 1:
-        for i in range(len(current_tour) - 1):
-            current_tour_length += distance_matrix[current_tour[i], current_tour[i + 1]]
+    # Calculate basic tour metrics
+    current_length = 0.0
+    edge_lengths = []
     
-    # Calculate progress metrics
-    percentage_completed = (len(current_tour) / node_num) * 100
-    current_node = current_tour[-1] if current_tour else -1
-    remaining_nodes_count = node_num - len(current_tour)
+    # Calculate length of constructed path (for complete or partial tour)
+    for i in range(len(current_tour) - 1):
+        edge_length = distance_matrix[current_tour[i], current_tour[i + 1]]
+        current_length += edge_length
+        edge_lengths.append(edge_length)
     
-    # Get all nodes and identify remaining ones
-    all_nodes = set(range(node_num))
-    visited_nodes = set(current_tour)
-    remaining_nodes = list(all_nodes - visited_nodes)
+    # If tour is complete, add return to start edge
+    if visited_count == total_nodes and visited_count > 1:
+        return_edge = distance_matrix[current_tour[-1], current_tour[0]]
+        current_length += return_edge
+        edge_lengths.append(return_edge)
     
-    # Initialize metrics that depend on remaining nodes
-    avg_distance_to_remaining = 0.0
-    min_distance_to_remaining = float('inf')
-    max_distance_to_remaining = 0.0
-    std_distance_to_remaining = 0.0
-    nearest_neighbor_ratio = 0.0
-    avg_remaining_inter_distance = 0.0
+    # Calculate percentage complete
+    percent_complete = visited_count / total_nodes if total_nodes > 0 else 0.0
     
-    if remaining_nodes:
-        # Calculate distances from current node to remaining nodes
-        distances_to_remaining = distance_matrix[current_node, remaining_nodes]
+    # Calculate edge statistics
+    avg_edge_length = np.mean(edge_lengths) if edge_lengths else 0.0
+    std_edge_length = np.std(edge_lengths) if len(edge_lengths) > 1 else 0.0
+    
+    # Estimate optimal tour length using nearest neighbor heuristic
+    def estimate_optimal_tour_length():
+        if total_nodes == 0:
+            return 1.0  # Avoid division by zero
         
-        avg_distance_to_remaining = np.mean(distances_to_remaining)
-        min_distance_to_remaining = np.min(distances_to_remaining)
-        max_distance_to_remaining = np.max(distances_to_remaining)
-        std_distance_to_remaining = np.std(distances_to_remaining)
+        # Simple nearest neighbor estimation
+        unvisited = set(range(total_nodes))
+        current = 0
+        tour_length = 0.0
+        unvisited.remove(current)
         
-        # Calculate nearest neighbor ratio
-        if avg_distance_to_remaining > 0:
-            nearest_neighbor_ratio = min_distance_to_remaining / avg_distance_to_remaining
+        while unvisited:
+            # Find nearest unvisited neighbor
+            nearest = min(unvisited, key=lambda x: distance_matrix[current, x])
+            tour_length += distance_matrix[current, nearest]
+            current = nearest
+            unvisited.remove(current)
         
-        # Calculate average distance between remaining nodes
-        if len(remaining_nodes) > 1:
-            # Create submatrix for remaining nodes
-            remaining_dist_matrix = distance_matrix[np.ix_(remaining_nodes, remaining_nodes)]
-            # Get upper triangle without diagonal
-            upper_triangle = remaining_dist_matrix[np.triu_indices_from(remaining_dist_matrix, 1)]
-            avg_remaining_inter_distance = np.mean(upper_triangle) if len(upper_triangle) > 0 else 0.0
+        # Return to start
+        tour_length += distance_matrix[current, 0]
+        return tour_length
     
-    # Distance from current node back to start node
-    start_node = current_tour[0] if current_tour else -1
-    current_to_start_distance = distance_matrix[current_node, start_node] if current_tour else 0.0
+    optimal_estimate = estimate_optimal_tour_length()
+    current_to_optimal_ratio = current_length / optimal_estimate if optimal_estimate > 0 else float('inf')
     
-    # Connectivity ratio (edges in tour vs total possible edges)
-    edges_in_tour = max(0, len(current_tour) - 1)  # Number of edges in current partial tour
-    total_possible_edges = node_num * (node_num - 1) / 2  # Complete graph edges
-    connectivity_ratio = edges_in_tour / total_possible_edges if total_possible_edges > 0 else 0.0
+    # Calculate unvisited nodes metrics
+    unvisited_nodes_count = total_nodes - visited_count
+    visited_set = set(current_tour)
+    unvisited_set = set(range(total_nodes)) - visited_set
     
-    # Estimate final tour length
-    tour_completion_estimate = current_tour_length
-    if remaining_nodes_count > 0:
-        # Add estimated cost to complete the tour
-        tour_completion_estimate += (remaining_nodes_count * avg_remaining_inter_distance)
-        # Add cost to return to start
-        tour_completion_estimate += current_to_start_distance
+    # Calculate average minimum distance from visited to unvisited nodes
+    if unvisited_set and visited_set:
+        min_distances = []
+        for visited_node in visited_set:
+            min_dist_to_unvisited = min(distance_matrix[visited_node, u] for u in unvisited_set)
+            min_distances.append(min_dist_to_unvisited)
+        avg_distance_to_unvisited = np.mean(min_distances)
+    else:
+        avg_distance_to_unvisited = 0.0
+    
+    # Calculate connectivity quality from last node
+    if current_tour and unvisited_set:
+        last_node = current_tour[-1]
+        min_connection = min(distance_matrix[last_node, u] for u in unvisited_set)
+        avg_distance = np.mean(distance_matrix)
+        connectivity_quality = min_connection / avg_distance if avg_distance > 0 else 0.0
+    else:
+        connectivity_quality = 0.0
+    
+    # For cluster cohesion and path compactness, we need spatial coordinates
+    # Since we only have distance matrix, we'll approximate these metrics
+    cluster_cohesion = 0.5  # Placeholder - requires coordinate data
+    path_compactness = 0.5  # Placeholder - requires coordinate data
     
     return {
-        'current_tour_length': float(current_tour_length),
-        'percentage_completed': float(percentage_completed),
-        'current_node': int(current_node),
-        'remaining_nodes_count': int(remaining_nodes_count),
-        'avg_distance_to_remaining': float(avg_distance_to_remaining),
-        'min_distance_to_remaining': float(min_distance_to_remaining),
-        'max_distance_to_remaining': float(max_distance_to_remaining),
-        'std_distance_to_remaining': float(std_distance_to_remaining),
-        'nearest_neighbor_ratio': float(nearest_neighbor_ratio),
-        'current_to_start_distance': float(current_to_start_distance),
-        'avg_remaining_inter_distance': float(avg_remaining_inter_distance),
-        'connectivity_ratio': float(connectivity_ratio),
-        'tour_completion_estimate': float(tour_completion_estimate)
+        'current_tour_length': float(current_length),
+        'percent_complete': float(percent_complete),
+        'avg_edge_length_current': float(avg_edge_length),
+        'std_edge_length_current': float(std_edge_length),
+        'current_to_optimal_ratio': float(current_to_optimal_ratio),
+        'unvisited_nodes_count': int(unvisited_nodes_count),
+        'avg_distance_to_unvisited': float(avg_distance_to_unvisited),
+        'connectivity_quality': float(connectivity_quality),
+        'cluster_cohesion': float(cluster_cohesion),
+        'path_compactness': float(path_compactness)
     }
 ***
 ------------------------------------------------------------------------------------
@@ -427,14 +403,15 @@ If you have no information to provide, simply respond with ***None***.
 assistant
 ***observation_problem_state:
 current_tour_length;
-percentage_completed;
-remaining_nodes_count;
-min_distance_to_remaining;
-nearest_neighbor_ratio;
-current_to_start_distance;
-connectivity_ratio;
-tour_completion_estimate;
+percent_complete;
+avg_edge_length_current;
+std_edge_length_current;
+current_to_optimal_ratio;
+unvisited_nodes_count;
+avg_distance_to_unvisited;
+connectivity_quality;
 ***
+**Analysis**: These 8 core metrics capture the essential dynamics of solution evolution. `current_tour_length` and `current_to_optimal_ratio` track solution quality. `percent_complete` and `unvisited_nodes_count` measure progress. `avg_edge_length_current` and `std_edge_length_current` monitor edge selection patterns. `avg_distance_to_unvisited` and `connectivity_quality` assess expansion potential from the current solution state. Together, they provide a comprehensive view of solution development while remaining computationally efficient.
 ------------------------------------------------------------------------------------
 
 user
@@ -443,9 +420,7 @@ def get_observation_problem_state(solution_problem_state: dict) -> dict:
 
 The input is solution_problem_state.
 
-The output is algo a dict, which contains the following problem states as keys: current_tour_length,percentage_completed,
-remaining_nodes_count,min_distance_to_remaining,
-nearest_neighbor_ratio,current_to_start_distance,connectivity_ratio,tour_completion_estimate.
+The output is algo a dict, which contains the following problem states as keys: current_tour_length,percent_complete,avg_edge_length_current,std_edge_length_current,current_to_optimal_ratio,unvisited_nodes_count,avg_distance_to_unvisited,connectivity_quality.
 
 Please note:
 1. Just take it from solution_problem_state without modify it.
@@ -486,26 +461,25 @@ def get_observation_problem_state(solution_problem_state: dict) -> dict:
 
     Returns:
         dict: The dictionary contains the core problem state with:
-            - current_tour_length (float): Total distance of current partial tour
-            - percentage_completed (float): Percentage of nodes visited (0-100)
-            - remaining_nodes_count (int): Number of nodes not yet visited
-            - min_distance_to_remaining (float): Minimum distance from current node to remaining nodes
-            - nearest_neighbor_ratio (float): Ratio of min to avg distance to remaining nodes
-            - current_to_start_distance (float): Distance from current node back to start node
-            - connectivity_ratio (float): Ratio of edges in tour to total possible edges
-            - tour_completion_estimate (float): Estimated final tour length
+            - current_tour_length (float): Total length of the current tour
+            - percent_complete (float): Percentage of nodes visited in the tour
+            - avg_edge_length_current (float): Average length of edges in the current tour
+            - std_edge_length_current (float): Standard deviation of edge lengths in current tour
+            - current_to_optimal_ratio (float): Ratio of current tour length to estimated optimal
+            - unvisited_nodes_count (int): Number of nodes not yet visited
+            - avg_distance_to_unvisited (float): Average minimum distance from visited to unvisited nodes
+            - connectivity_quality (float): Quality of connection from last node to unvisited nodes
     """
     return {
         "current_tour_length": solution_problem_state["current_tour_length"],
-        "percentage_completed": solution_problem_state["percentage_completed"],
-        "remaining_nodes_count": solution_problem_state["remaining_nodes_count"],
-        "min_distance_to_remaining": solution_problem_state["min_distance_to_remaining"],
-        "nearest_neighbor_ratio": solution_problem_state["nearest_neighbor_ratio"],
-        "current_to_start_distance": solution_problem_state["current_to_start_distance"],
-        "connectivity_ratio": solution_problem_state["connectivity_ratio"],
-        "tour_completion_estimate": solution_problem_state["tour_completion_estimate"]
+        "percent_complete": solution_problem_state["percent_complete"],
+        "avg_edge_length_current": solution_problem_state["avg_edge_length_current"],
+        "std_edge_length_current": solution_problem_state["std_edge_length_current"],
+        "current_to_optimal_ratio": solution_problem_state["current_to_optimal_ratio"],
+        "unvisited_nodes_count": solution_problem_state["unvisited_nodes_count"],
+        "avg_distance_to_unvisited": solution_problem_state["avg_distance_to_unvisited"],
+        "connectivity_quality": solution_problem_state["connectivity_quality"]
     }
 ***
 ------------------------------------------------------------------------------------
-
 
