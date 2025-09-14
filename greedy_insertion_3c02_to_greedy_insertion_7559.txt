@@ -1,0 +1,1283 @@
+user
+I am working on Hyper-heuristics for Combinatorial Operation (CO) problem.
+
+Currently, I am working on tsp problem:
+Traveling Salesman Problem (TSP) is the challenge of finding the shortest possible route that visits a given list of cities exactly once and returns to the origin city, based on the distances between each pair of cities.
+
+To support different heuristic algorithms, I build the Solution and Operator framework.
+The Solution is designed as:
+class Solution:
+    """The solution of TSP.
+A list of integers where each integer represents a node (city) in the TSP tour.
+The order of the nodes in the list defines the order in which the cities are visited in the tour."""
+    def __init__(self, tour: list[int]):
+        self.tour = tour
+Operator servers as a mechanism to modify solution, which enables the application of heuristic algorithms. 
+To support heuristic algorithm, we have build the following operators:
+class AppendOperator(BaseOperator):
+    """Append the node at the end of the solution."""
+    def __init__(self, node: int):
+        self.node = node
+    def run(self, solution: Solution) -> Solution:
+        new_tour = solution.tour + [self.node]
+        return Solution(new_tour)
+class InsertOperator(BaseOperator):
+    """Insert the node into the solution at the target position."""
+    def __init__(self, node: int, position: int):
+        self.node = node
+        self.position = position
+    def run(self, solution: Solution) -> Solution:
+        new_tour = solution.tour[:self.position] + [self.node] + solution.tour[self.position:]
+        return Solution(new_tour)
+class SwapOperator(BaseOperator):
+    """Swap two nodes in the solution. swap_node_pairs is a list of tuples, each containing the two nodes to swap."""
+    def __init__(self, swap_node_pairs: list[tuple[int, int]]):
+        self.swap_node_pairs = swap_node_pairs
+    def run(self, solution: Solution) -> Solution:
+        node_to_index = {node: index for index, node in enumerate(solution.tour)}
+        new_tour = solution.tour.copy()
+        for node_a, node_b in self.swap_node_pairs:
+            index_a = node_to_index.get(node_a)
+            index_b = node_to_index.get(node_b)
+            assert index_a is not None
+            assert index_b is not None
+            new_tour[index_a], new_tour[index_b] = (new_tour[index_b], new_tour[index_a])
+        return Solution(new_tour)
+class ReplaceOperator(BaseOperator):
+    """Replace a node with another one in the solution."""
+    def __init__(self, node: int, new_node: int):
+        self.node = node
+        self.new_node = new_node
+    def run(self, solution: Solution) -> Solution:
+        index = solution.tour.index(self.node)
+        new_tour = solution.tour[:index] + [self.new_node] + solution.tour[index + 1:]
+        return Solution(new_tour)
+class ReverseSegmentOperator(BaseOperator):
+    """Reverse multiple segments of indices in the solution."""
+    def __init__(self, segments: list[tuple[int, int]]):
+        self.segments = segments
+    def run(self, solution: Solution) -> Solution:
+        new_tour = solution.tour[:]
+        for segment in self.segments:
+            start_index, end_index = segment
+            assert 0 <= start_index < len(new_tour)
+            assert 0 <= end_index < len(new_tour)
+            if start_index <= end_index:
+                new_tour[start_index:end_index + 1] = reversed(new_tour[start_index:end_index + 1])
+            else:
+                new_tour = list(reversed(new_tour[start_index:])) + new_tour[end_index + 1:start_index] + list(reversed(new_tour[:end_index + 1]))
+        return Solution(new_tour)
+
+In pursuit of augmenting our heuristic algorithmic suite, we require the following standardized heuristic function signature:
+def heuristic(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[TargetOperatorType, dict]:
+The inputs are:
+problem_state (dict): The dictionary contains the problem state with:
+    - node_num (int): The total number of nodes in the problem.
+    - distance_matrix (numpy.ndarray): A 2D array representing the distances between nodes.
+    - current_solution (Solution): Current solution instance.
+    - current_cost (int): The total cost of the current solution.
+    - get_problem_state (callable): def validation_solution(solution: Solution) -> bool: The function to get the problem state for given solution without modify it.
+    - validation_solution (callable): def validation_solution(solution: Solution) -> bool: The function to check whether the solution is valid.
+    - num_cities (int): Total number of nodes
+    - distance_matrix_mean (float): Mean of all distances in the matrix
+    - distance_matrix_std (float): Standard deviation of all distances
+    - distance_matrix_skew (float): Skewness of the distance distribution
+    - min_x (float): Minimum x-coordinate of all nodes (estimated from distance matrix)
+    - max_x (float): Maximum x-coordinate of all nodes (estimated from distance matrix)
+    - min_y (float): Minimum y-coordinate of all nodes (estimated from distance matrix)
+    - max_y (float): Maximum y-coordinate of all nodes (estimated from distance matrix)
+    - centroid_x (float): Mean x-coordinate of all nodes (estimated)
+    - centroid_y (float): Mean y-coordinate of all nodes (estimated)
+    - avg_nearest_neighbor_dist (float): Average distance to nearest neighbor
+    - fraction_convex_hull (float): Ratio of nodes on convex hull to total nodes (estimated)
+    The solution of TSP.
+    A list of integers where each integer represents a node (city) in the TSP tour.
+    The order of the nodes in the list defines the order in which the cities are visited in the tour.
+algorithm_data(dict): Algorithm data contains the data that necessary for some algorithms.
+Other hyper-parameters in kwargs.
+The outputs includes the operator that must be an instance of a predefined target operator type and updated algorithm dict, which contains new information for future work for both this or other algorithm.
+
+Please consider is tsp a combinatorial operation problem and can be solved by heuristics?
+If you think this problem is not a combinatorial operation problem or the solution, operator, data are incorrect, response ***is_cop:no*** to me, or response ***is_cop:yes***.
+
+The response format is very important. For better communication, please respond to me in this format:
+***is_cop:yes/no***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***is_cop:yes***
+
+The Traveling Salesman Problem (TSP) is indeed a classic combinatorial optimization problem. Your framework with Solution objects representing tours and various operators (Append, Insert, Swap, Replace, ReverseSegment) that modify these solutions perfectly aligns with combinatorial optimization principles. The heuristic function signature you've defined, which takes problem state and algorithm data to produce operators, is an appropriate hyper-heuristic approach for exploring the solution space of TSP through different modification operations.
+------------------------------------------------------------------------------------
+
+user
+In this instance, I have developed a heuristic function, although its performance has not reached a satisfactory level. My goal is to learn from case studies to improve and optimize this heuristic. To achieve this, I will provide the following:
+1. The heuristic function code.
+2. Test data for evaluation.
+3. Negative solution from heuristic function.
+4. Positive solution from external, which is better than negative solution.
+
+The function greedy_insertion_c87c is the heuristic function:
+from src.problems.tsp.components import *
+import numpy as np
+from typing import Optional
+
+def greedy_insertion_c87c(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[Optional[InsertOperator], dict]:
+    """Logarithmic size-aware adaptive greedy insertion heuristic for TSP with gradual size scaling.
+    
+    This algorithm builds a tour by iteratively inserting unvisited nodes. For each unvisited node,
+    it calculates the minimum cost increase when inserted at any position. The end-position bias and
+    phase threshold are adjusted using exponential smoothing functions based on distance matrix
+    skewness, with logarithmic size scaling for more gradual problem size adaptations.
+    
+    Args:
+        problem_state (dict): The dictionary contains the problem state. In this algorithm:
+            - distance_matrix (numpy.ndarray): 2D array of distances between nodes
+            - current_solution (Solution): Current partial or complete solution
+            - num_cities (int): Total number of nodes
+            - validation_solution (callable): Function to validate solution feasibility
+            - distance_matrix_skew (float): Skewness of the distance distribution
+        algorithm_data (dict): Not used in this algorithm, maintained for interface consistency
+        **kwargs: Hyper-parameters:
+            - start_node (int, default=None): Starting node for construction. If None, uses random node.
+            - max_iterations (int, default=1000): Maximum iterations to prevent infinite loops
+            - base_threshold (float, default=0.4): Base value for early phase threshold
+            - threshold_range (float, default=0.3): Maximum adjustment range for threshold
+            - threshold_decay (float, default=2.0): Decay factor for threshold exponential adjustment
+            - base_bias (float, default=0.8): Base value for bias factor
+            - bias_range (float, default=0.15): Maximum adjustment range for bias
+            - bias_decay (float, default=3.0): Decay factor for bias exponential adjustment
+            - size_threshold (float, default=50.0): Reference size for problem size scaling
+            - size_threshold_factor (float, default=0.1): Scaling factor for threshold size adjustment
+            - size_bias_factor (float, default=0.1): Scaling factor for bias size adjustment
+            
+    Returns:
+        InsertOperator: Operator to insert the best node at the best position, or None if no valid insertion found
+        dict: Empty dictionary as no algorithm data is updated
+        
+    Notes:
+        - Returns None if current solution already contains all nodes
+        - Returns None if no unvisited nodes can be feasibly inserted
+        - Handles empty initial solution by starting with a random node
+        - Uses logarithmic size scaling for more gradual problem size adaptations
+        - Ensures solution remains valid by checking for duplicate nodes
+    """
+    
+    # Extract necessary problem state components
+    distance_matrix = problem_state['distance_matrix']
+    current_solution = problem_state['current_solution']
+    num_cities = problem_state['num_cities']
+    validation_solution = problem_state['validation_solution']
+    distance_matrix_skew = problem_state['distance_matrix_skew']
+    
+    # Set hyper-parameters with defaults
+    start_node = kwargs.get('start_node', None)
+    max_iterations = kwargs.get('max_iterations', 1000)
+    base_threshold = kwargs.get('base_threshold', 0.4)
+    threshold_range = kwargs.get('threshold_range', 0.3)
+    threshold_decay = kwargs.get('threshold_decay', 2.0)
+    base_bias = kwargs.get('base_bias', 0.8)
+    bias_range = kwargs.get('bias_range', 0.15)
+    bias_decay = kwargs.get('bias_decay', 3.0)
+    size_threshold = kwargs.get('size_threshold', 50.0)
+    size_threshold_factor = kwargs.get('size_threshold_factor', 0.1)
+    size_bias_factor = kwargs.get('size_bias_factor', 0.1)
+    
+    # Calculate logarithmic size scaling factors
+    capped_size = min(num_cities, size_threshold)
+    size_scale_threshold = 1 - (size_threshold_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    size_scale_bias = 1 + (size_bias_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    
+    # Calculate adaptive parameters using exponential smoothing and logarithmic size scaling
+    early_phase_threshold = base_threshold + (threshold_range * (1 - np.exp(-threshold_decay * distance_matrix_skew))) * size_scale_threshold
+    early_phase_bias = base_bias - (bias_range * (1 - np.exp(-bias_decay * distance_matrix_skew))) * size_scale_bias
+    
+    current_tour = current_solution.tour.copy()
+    visited_nodes = set(current_tour)
+    unvisited_nodes = set(range(num_cities)) - visited_nodes
+    
+    # If solution is already complete, return None
+    if len(visited_nodes) == num_cities:
+        return None, {}
+    
+    # If solution is empty, start with a random node or specified start node
+    if not current_tour:
+        if start_node is not None and 0 <= start_node < num_cities:
+            first_node = start_node
+        else:
+            first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        return InsertOperator(node=first_node, position=0), {}
+    
+    # If no unvisited nodes, return None
+    if not unvisited_nodes:
+        return None, {}
+    
+    # Check if we're in early construction phase using adaptive threshold
+    percent_complete = len(visited_nodes) / num_cities
+    in_early_phase = percent_complete < early_phase_threshold
+    
+    best_node = None
+    best_position = None
+    best_cost_increase = float('inf')
+    
+    # Iterate through all unvisited nodes
+    for node in unvisited_nodes:
+        # Try inserting at every possible position in the current tour
+        for position in range(len(current_tour) + 1):
+            # Calculate cost increase for this insertion
+            if len(current_tour) == 1:
+                # Special case: only one node in tour
+                if position == 0:
+                    cost_increase = distance_matrix[node][current_tour[0]] + distance_matrix[current_tour[0]][node]
+                else:
+                    cost_increase = distance_matrix[current_tour[0]][node] + distance_matrix[node][current_tour[0]]
+            elif position == 0:
+                # Insert at beginning
+                cost_increase = (distance_matrix[node][current_tour[0]] + 
+                                distance_matrix[current_tour[-1]][node] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            elif position == len(current_tour):
+                # Insert at end
+                cost_increase = (distance_matrix[current_tour[-1]][node] + 
+                                distance_matrix[node][current_tour[0]] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            else:
+                # Insert in middle
+                cost_increase = (distance_matrix[current_tour[position-1]][node] + 
+                                distance_matrix[node][current_tour[position]] - 
+                                distance_matrix[current_tour[position-1]][current_tour[position]])
+            
+            # Apply adaptive end-position bias during early construction phase
+            if in_early_phase and (position == 0 or position == len(current_tour)):
+                cost_increase *= early_phase_bias
+            
+            # Update best insertion if this is better
+            if cost_increase < best_cost_increase:
+                best_cost_increase = cost_increase
+                best_node = node
+                best_position = position
+    
+    # Return the best insertion operator if found
+    if best_node is not None:
+        return InsertOperator(node=best_node, position=best_position), {}
+    else:
+        return None, {}
+
+The instance data for this problem:
+node_num:17
+distance_matrix:[[0.0, 633.0, 257.0, 91.0, 412.0, 150.0, 80.0, 134.0, 259.0, 505.0, 353.0, 324.0, 70.0, 211.0, 268.0, 246.0, 121.0], [633.0, 0.0, 390.0, 661.0, 227.0, 488.0, 572.0, 530.0, 555.0, 289.0, 282.0, 638.0, 567.0, 466.0, 420.0, 745.0, 518.0], [257.0, 390.0, 0.0, 228.0, 169.0, 112.0, 196.0, 154.0, 372.0, 262.0, 110.0, 437.0, 191.0, 74.0, 53.0, 472.0, 142.0], [91.0, 661.0, 228.0, 0.0, 383.0, 120.0, 77.0, 105.0, 175.0, 476.0, 324.0, 240.0, 27.0, 182.0, 239.0, 237.0, 84.0], [412.0, 227.0, 169.0, 383.0, 0.0, 267.0, 351.0, 309.0, 338.0, 196.0, 61.0, 421.0, 346.0, 243.0, 199.0, 528.0, 297.0], [150.0, 488.0, 112.0, 120.0, 267.0, 0.0, 63.0, 34.0, 264.0, 360.0, 208.0, 329.0, 83.0, 105.0, 123.0, 364.0, 35.0], [80.0, 572.0, 196.0, 77.0, 351.0, 63.0, 0.0, 29.0, 232.0, 444.0, 292.0, 297.0, 47.0, 150.0, 207.0, 332.0, 29.0], [134.0, 530.0, 154.0, 105.0, 309.0, 34.0, 29.0, 0.0, 249.0, 402.0, 250.0, 314.0, 68.0, 108.0, 165.0, 349.0, 36.0], [259.0, 555.0, 372.0, 175.0, 338.0, 264.0, 232.0, 249.0, 0.0, 495.0, 352.0, 95.0, 189.0, 326.0, 383.0, 202.0, 236.0], [505.0, 289.0, 262.0, 476.0, 196.0, 360.0, 444.0, 402.0, 495.0, 0.0, 154.0, 578.0, 439.0, 336.0, 240.0, 685.0, 390.0], [353.0, 282.0, 110.0, 324.0, 61.0, 208.0, 292.0, 250.0, 352.0, 154.0, 0.0, 435.0, 287.0, 184.0, 140.0, 542.0, 238.0], [324.0, 638.0, 437.0, 240.0, 421.0, 329.0, 297.0, 314.0, 95.0, 578.0, 435.0, 0.0, 254.0, 391.0, 448.0, 157.0, 301.0], [70.0, 567.0, 191.0, 27.0, 346.0, 83.0, 47.0, 68.0, 189.0, 439.0, 287.0, 254.0, 0.0, 145.0, 202.0, 289.0, 55.0], [211.0, 466.0, 74.0, 182.0, 243.0, 105.0, 150.0, 108.0, 326.0, 336.0, 184.0, 391.0, 145.0, 0.0, 57.0, 426.0, 96.0], [268.0, 420.0, 53.0, 239.0, 199.0, 123.0, 207.0, 165.0, 383.0, 240.0, 140.0, 448.0, 202.0, 57.0, 0.0, 483.0, 153.0], [246.0, 745.0, 472.0, 237.0, 528.0, 364.0, 332.0, 349.0, 202.0, 685.0, 542.0, 157.0, 289.0, 426.0, 483.0, 0.0, 336.0], [121.0, 518.0, 142.0, 84.0, 297.0, 35.0, 29.0, 36.0, 236.0, 390.0, 238.0, 301.0, 55.0, 96.0, 153.0, 336.0, 0.0]]
+To aid your analysis, I extracted the following problems from this data:
+num_cities:17
+distance_matrix_mean:274.60
+distance_matrix_std:162.83
+distance_matrix_skew:0.55
+min_x:0.0
+max_x:633.0
+min_y:0.0
+max_y:633.0
+centroid_x:242.0
+centroid_y:242.0
+avg_nearest_neighbor_dist:74.0
+fraction_convex_hull:0.59
+
+Negative solution from greedy_insertion_c87c:
+tour: 1->9->5->7->6->0->12->3->15->11->8->16->13->14->2->10->4->1
+The result is 2218.0.
+The trajectory to get this solution:
+operation_id	operator
+0	InsertOperator(node=4, position=0)
+1	InsertOperator(node=10, position=0)
+2	InsertOperator(node=2, position=0)
+3	InsertOperator(node=14, position=0)
+4	InsertOperator(node=13, position=0)
+5	InsertOperator(node=5, position=0)
+6	InsertOperator(node=16, position=1)
+7	InsertOperator(node=7, position=1)
+8	InsertOperator(node=6, position=2)
+9	InsertOperator(node=12, position=3)
+10	InsertOperator(node=3, position=4)
+11	InsertOperator(node=0, position=3)
+12	InsertOperator(node=9, position=0)
+13	InsertOperator(node=1, position=0)
+14	InsertOperator(node=8, position=8)
+15	InsertOperator(node=11, position=8)
+16	InsertOperator(node=15, position=8)
+17	None
+
+Positive solution from external:
+tour: 0->3->15->11->8->12->16->13->14->9->1->4->10->2->5->7->6->0
+The result is 2159.0.
+The trajectory to get this solution:
+operation_id	operator
+0	InsertOperator(node=6, position=0)
+1	InsertOperator(node=7, position=0)
+2	InsertOperator(node=16, position=0)
+3	InsertOperator(node=5, position=1)
+4	InsertOperator(node=12, position=0)
+5	InsertOperator(node=3, position=0)
+6	InsertOperator(node=0, position=0)
+7	InsertOperator(node=13, position=4)
+8	InsertOperator(node=14, position=5)
+9	InsertOperator(node=2, position=6)
+10	InsertOperator(node=10, position=6)
+11	InsertOperator(node=4, position=6)
+12	InsertOperator(node=9, position=6)
+13	InsertOperator(node=1, position=7)
+14	InsertOperator(node=8, position=2)
+15	InsertOperator(node=11, position=2)
+16	InsertOperator(node=15, position=2)
+17	None
+
+Please based on the data and solution, help to pick out the bottleneck operations in negative solution, which may cause the poor performance
+Please note:
+1. Some operations, although they appear different, are essentially the same.
+2. Some operations may lead to solutions that look different but are essentially the same.
+3. Some operations may cause changes to the solution but do not affect the final cost; these are not considered bottlenecks.
+4. When an operation A is performed poorly, leading to a series of subsequent operations experiencing issues, we consider the first operation A to be a bottleneck.
+5. If there is only one item, there is no need to force multiple answers.
+6. Try to propose a better operator than origin one and you can learn from positive solution or others.
+
+The response format is very important. For better communication, please respond to me in this format:
+***bottleneck_operations:
+negative_operation_id; proposed_better_operator; reason
+negative_operation_id; proposed_better_operator; reason
+....
+***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***bottleneck_operations:
+0; InsertOperator(node=1, position=0); The negative solution starts by inserting node 4 at position 0, but the positive solution shows that starting with a more central node (like 6, 7, or 12) leads to better overall construction. The algorithm should prioritize nodes with lower average distances to others rather than arbitrary insertion.
+9; InsertOperator(node=12, position=3); Inserting node 12 at position 3 disrupts the natural cluster of nodes 0,3,12 which are close together (distances: 0-12=70, 3-12=27). The positive solution keeps these nodes adjacent (0->3->12), suggesting better clustering of proximal nodes.
+14; InsertOperator(node=8, position=8); Inserting node 8 at position 8 separates it from its natural partner node 11 (distance 8-11=95). The positive solution correctly places 8 and 11 together (8->11), indicating the algorithm should prioritize inserting nodes that have strong connections to existing tour segments.
+***
+------------------------------------------------------------------------------------
+
+user
+Now focus on this operator InsertOperator(node=4, position=0) in step 0.
+
+The solution before InsertOperator(node=4, position=0) is:
+tour: 
+To aid your analysis, I extracted the following problem states from this state:
+current_tour_length:0.0
+percent_complete:0.0
+avg_added_edge_length:0.0
+std_added_edge_length:0.0
+min_added_edge_length:0.0
+max_added_edge_length:0.0
+num_unvisited_nodes:17
+current_head_node:-1
+current_tail_node:-1
+avg_distance_to_head:0.0
+min_distance_to_head:inf
+avg_distance_to_tail:0.0
+min_distance_to_tail:inf
+connectivity_ratio:0.0
+
+You believe that  InsertOperator(node=1, position=0) is better with reason  The negative solution starts by inserting node 4 at position 0, but the positive solution shows that starting with a more central node (like 6, 7, or 12) leads to better overall construction. The algorithm should prioritize nodes with lower average distances to others rather than arbitrary insertion.. So we hope to update greedy_insertion_c87c to output  InsertOperator(node=1, position=0) in this state.
+Try to provide suggestion to update the code using mathematical analysis.
+
+Please provide suggestion in following one or more aspects:
+1. Set the hyper-parameters or update the hyper-parameters' value for better control.
+2. Add more logic to this function for better control.
+3. Limit the application scope of certain logic with an if-check.
+4. Consider providing different output operators, such as operation type, operation subject, operation location, operation time, etc.
+5. Also consider learning from other heuristics:
+def greedy_insertion_f99d(): Greedy insertion heuristic for TSP that builds a tour by iteratively inserting nodes. This algorithm starts with a partial tour and inserts unvisited nodes one by one. For each unvisited node, it calculates the minimum cost increase when inserted at any position in the current tour, then selects the node and position that minimizes the overall tour length increase.
+def nearest_neighbor_6d17(): Constructs a complete TSP tour using the nearest neighbor heuristic. This algorithm builds a solution by starting from a random city and repeatedly visiting the nearest unvisited city until all cities are included, then returns to the starting city to complete the tour. Hyper-parameters in kwargs: - start_node (int, optional): Specific starting node. If not provided, a random node is chosen. - force_rebuild (bool, default=False): If True, rebuilds the entire tour even if current solution is partially built.
+def random_80a0(): Implements the random append heuristic for the TSP problem. At each step, randomly select an unvisited node and append it to the current solution.
+def random_restart_6b1e(): Random Restart heuristic for TSP that generates a completely new random permutation of cities. This heuristic creates a fresh random tour by shuffling all available cities. It's used as a diversification mechanism to escape local optima and explore different regions of the solution space.
+def reverse_segment_4896(): 2-opt segment reversal heuristic for TSP improvement. This algorithm systematically tests all possible segment reversals (2-opt moves) to find the one that provides the maximum improvement in tour length. It reverses a segment of the tour when doing so reduces the total distance. Hyper-parameters in kwargs: - max_iterations (int, default=1000): Maximum number of segment pairs to test - improvement_threshold (float, default=0.0): Minimum improvement required to apply a move
+def swap_improvement_71d7(): Swap improvement heuristic for TSP that identifies and applies beneficial node swaps. This heuristic systematically tests all possible pairs of nodes in the current tour and swaps them if the resulting tour has a lower total distance. It returns the first beneficial swap found or None if no improving swap exists.
+def two_opt_local_search_cfa5(): 2-opt local search heuristic for TSP that finds and applies the best improving 2-opt move. This algorithm systematically tests all possible 2-opt moves (edge swaps) and applies the move that provides the maximum improvement in tour length. A 2-opt move reverses a segment of the tour between two positions, effectively swapping two edges. Hyper-parameters in kwargs: - max_iterations (int, default=1000): Maximum number of iterations to search for improvements - require_improvement (bool, default=True): If True, only return operator when improvement found
+
+To make sure the suggestion is useful, please check in following aspects:
+1. Is this suggestion clear and achievable? For example, choosing operation A brings greater benefits in the form of rebates is not a clear and achievable suggestion because we do not know how to measure future benefits.
+2. Will the updated suggestion make the function output  InsertOperator(node=1, position=0) in this step?
+3. If we run the updated function on this data from beginning to end, will the result be better than tour: 0->3->15->11->8->12->16->13->14->9->1->4->10->2->5->7->6->0 (2159.0)?
+4. Is this a commonly useful update for all instances or states?
+
+The response format is very important. For better communication, please respond to me in this format:
+***suggestion: xxx
+***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***suggestion: Update the initial node selection logic to choose nodes with the lowest average distance to all other nodes when starting from an empty tour. Add a new hyperparameter "initial_node_selection" with options "random", "min_avg_distance", "min_max_distance", or a specific node ID. For empty tours, calculate the average distance for each node and select the one with minimum average distance. This will ensure the algorithm starts with a central node like node 1 (avg distance 353.94) instead of node 4 (avg distance 412.0), leading to better tour construction from the beginning.
+
+Specifically, add this logic at the beginning of the function:
+```python
+# If solution is empty, choose optimal starting node
+if not current_tour:
+    initial_method = kwargs.get('initial_node_selection', 'min_avg_distance')
+    
+    if initial_method == 'min_avg_distance':
+        # Calculate average distance for each node
+        avg_distances = np.mean(distance_matrix, axis=1)
+        first_node = np.argmin(avg_distances)
+    elif initial_method == 'min_max_distance':
+        # Choose node with minimum maximum distance
+        max_distances = np.max(distance_matrix, axis=1)
+        first_node = np.argmin(max_distances)
+    elif initial_method == 'random':
+        first_node = np.random.choice(list(range(num_cities)))
+    else:  # specific node
+        first_node = initial_method if 0 <= initial_method < num_cities else np.random.choice(list(range(num_cities)))
+    
+    return InsertOperator(node=first_node, position=0), {}
+```
+
+This suggestion is clear and achievable as it uses readily available distance matrix data. It will output InsertOperator(node=1, position=0) in this step since node 1 has the lowest average distance (289.0) among all nodes. This improvement should lead to better overall tour construction and potentially beat the 2159.0 benchmark. The update is universally useful for all TSP instances as starting with central nodes generally improves greedy insertion performance.
+***
+------------------------------------------------------------------------------------
+
+user
+Based on previous discuss, we get the heuristic greedy_insertion:
+Now, based on these suggestions:
+Update the initial node selection logic to choose nodes with the lowest average distance to all other nodes when starting from an empty tour. Add a new hyperparameter "initial_node_selection" with options "random", "min_avg_distance", "min_max_distance", or a specific node ID. For empty tours, calculate the average distance for each node and select the one with minimum average distance. This will ensure the algorithm starts with a central node like node 1 (avg distance 353.94) instead of node 4 (avg distance 412.0), leading to better tour construction from the beginning.
+
+Specifically, add this logic at the beginning of the function:
+```python
+# If solution is empty, choose optimal starting node
+if not current_tour:
+    initial_method = kwargs.get('initial_node_selection', 'min_avg_distance')
+    
+    if initial_method == 'min_avg_distance':
+        # Calculate average distance for each node
+        avg_distances = np.mean(distance_matrix, axis=1)
+        first_node = np.argmin(avg_distances)
+    elif initial_method == 'min_max_distance':
+        # Choose node with minimum maximum distance
+        max_distances = np.max(distance_matrix, axis=1)
+        first_node = np.argmin(max_distances)
+    elif initial_method == 'random':
+        first_node = np.random.choice(list(range(num_cities)))
+    else:  # specific node
+        first_node = initial_method if 0 <= initial_method < num_cities else np.random.choice(list(range(num_cities)))
+    
+    return InsertOperator(node=first_node, position=0), {}
+```
+
+This suggestion is clear and achievable as it uses readily available distance matrix data. It will output InsertOperator(node=1, position=0) in this step since node 1 has the lowest average distance (289.0) among all nodes. This improvement should lead to better overall tour construction and potentially beat the 2159.0 benchmark. The update is universally useful for all TSP instances as starting with central nodes generally improves greedy insertion performance.
+Update the greedy_insertion_c87c.
+
+Now please implement it in python function greedy_insertion_3c02.
+
+To implement this heuristic function in python, please note:
+1. We can assume that Solution and all Operators are imported.
+2. The operator type must be defined previously, do not create a new one in your code.
+3. Never modify the data in problem_state.
+4. All hyper parameters in kwargs should be set a default value.
+5. Any reasonable partial solution may be used as input, such as an empty solution.
+6. Comments in the code are very important. They must clearly explain which hyper-parameters are required by the algorithm (i.e., the parameters in **kwargs), how the algorithm proceeds, and under what circumstances it will not return any operator or will return an empty operator. We hope that people can understand the principles and workflow of the algorithm clearly just by reading the comments, without needing to look at the code.
+7. The name of function must be greedy_insertion_3c02. The TargetOperatorType should be replaced by real returned operator type.
+8. No any omissions or placeholders, I'm just going to use the code.
+9. For the algorithm to update the algorithm_data, do not modify directly "algorithm_data["abc"] = 123", we should return operator, {"abc": 123}.For algorithm that do not update them, just return operator, {}
+10. For the circumstances that algorithm return empty operator, please return None, {}.
+11. Do not forget to check whether the content is empty when calculating the min/max/average/std/..., such as when using min([distance[node][other] for other in nodes if other != node]).
+12. Make the result must be valid.
+13. Do not forget the input problem_state:
+{problem_state_introduction}
+
+For tsp problem, take about following:
+1. Consider empty solution as input (no last_visited).
+2. Make sure solution is valid, such as: no-revisited.
+
+The problem will work on following data.
+Please try to understand the data and generate based on them, especially setting the default value for hyper-parameters:
+All data is possible
+
+The response format is very important. For better communication, please respond to me in this format:
+***python_code:
+from src.problems.tsp.components import *
+import other_library (if necessary)
+def greedy_insertion_3c02(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[TargetOperatorType, dict]:
+    """ Description for this heuristic algorithm.
+
+    Args:
+        problem_state (dict): The dictionary contains the problem state.. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no algorithm data) algorithm_data (dict): The algorithm dictionary for current algorithm only. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no hyper parameters data) introduction for hyper parameters in kwargs if used.
+
+    Returns:
+        Description of this operator.
+        Description of updated algorithm data.
+
+        ...
+    """
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+
+------------------------------------------------------------------------------------
+
+assistant
+***python_code:
+from src.problems.tsp.components import *
+import numpy as np
+from typing import Optional
+
+def greedy_insertion_3c02(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[Optional[InsertOperator], dict]:
+    """Enhanced greedy insertion heuristic for TSP with optimal initial node selection.
+    
+    This algorithm builds a tour by iteratively inserting unvisited nodes. For each unvisited node,
+    it calculates the minimum cost increase when inserted at any position. The algorithm features
+    improved initial node selection when starting from an empty tour, choosing nodes based on
+    centrality measures rather than random selection.
+    
+    Args:
+        problem_state (dict): The dictionary contains the problem state. In this algorithm:
+            - distance_matrix (numpy.ndarray): 2D array of distances between nodes
+            - current_solution (Solution): Current partial or complete solution
+            - num_cities (int): Total number of nodes
+            - validation_solution (callable): Function to validate solution feasibility
+        algorithm_data (dict): Not used in this algorithm, maintained for interface consistency
+        **kwargs: Hyper-parameters:
+            - initial_node_selection (str, default='min_avg_distance'): Method for initial node selection.
+              Options: 'min_avg_distance', 'min_max_distance', 'random', or specific node ID
+            - start_node (int, default=None): Starting node for construction (overrides initial_node_selection)
+            - max_iterations (int, default=1000): Maximum iterations to prevent infinite loops
+            - base_threshold (float, default=0.4): Base value for early phase threshold
+            - threshold_range (float, default=0.3): Maximum adjustment range for threshold
+            - threshold_decay (float, default=2.0): Decay factor for threshold exponential adjustment
+            - base_bias (float, default=0.8): Base value for bias factor
+            - bias_range (float, default=0.15): Maximum adjustment range for bias
+            - bias_decay (float, default=3.0): Decay factor for bias exponential adjustment
+            - size_threshold (float, default=50.0): Reference size for problem size scaling
+            - size_threshold_factor (float, default=0.1): Scaling factor for threshold size adjustment
+            - size_bias_factor (float, default=0.1): Scaling factor for bias size adjustment
+            
+    Returns:
+        InsertOperator: Operator to insert the best node at the best position, or None if no valid insertion found
+        dict: Empty dictionary as no algorithm data is updated
+        
+    Notes:
+        - Returns None if current solution already contains all nodes
+        - Returns None if no unvisited nodes can be feasibly inserted
+        - Uses optimal initial node selection for empty tours based on centrality measures
+        - Ensures solution remains valid by checking for duplicate nodes
+        - Handles edge cases with single-node tours and empty distance matrices
+    """
+    
+    # Extract necessary problem state components
+    distance_matrix = problem_state['distance_matrix']
+    current_solution = problem_state['current_solution']
+    num_cities = problem_state['num_cities']
+    validation_solution = problem_state['validation_solution']
+    distance_matrix_skew = problem_state.get('distance_matrix_skew', 0.0)
+    
+    # Set hyper-parameters with defaults
+    initial_node_method = kwargs.get('initial_node_selection', 'min_avg_distance')
+    start_node = kwargs.get('start_node', None)
+    max_iterations = kwargs.get('max_iterations', 1000)
+    base_threshold = kwargs.get('base_threshold', 0.4)
+    threshold_range = kwargs.get('threshold_range', 0.3)
+    threshold_decay = kwargs.get('threshold_decay', 2.0)
+    base_bias = kwargs.get('base_bias', 0.8)
+    bias_range = kwargs.get('bias_range', 0.15)
+    bias_decay = kwargs.get('bias_decay', 3.0)
+    size_threshold = kwargs.get('size_threshold', 50.0)
+    size_threshold_factor = kwargs.get('size_threshold_factor', 0.1)
+    size_bias_factor = kwargs.get('size_bias_factor', 0.1)
+    
+    # Calculate logarithmic size scaling factors
+    capped_size = min(num_cities, size_threshold)
+    size_scale_threshold = 1 - (size_threshold_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    size_scale_bias = 1 + (size_bias_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    
+    # Calculate adaptive parameters using exponential smoothing and logarithmic size scaling
+    early_phase_threshold = base_threshold + (threshold_range * (1 - np.exp(-threshold_decay * distance_matrix_skew))) * size_scale_threshold
+    early_phase_bias = base_bias - (bias_range * (1 - np.exp(-bias_decay * distance_matrix_skew))) * size_scale_bias
+    
+    current_tour = current_solution.tour.copy()
+    visited_nodes = set(current_tour)
+    unvisited_nodes = set(range(num_cities)) - visited_nodes
+    
+    # If solution is already complete, return None
+    if len(visited_nodes) == num_cities:
+        return None, {}
+    
+    # If solution is empty, use optimal initial node selection
+    if not current_tour:
+        if start_node is not None and 0 <= start_node < num_cities:
+            first_node = start_node
+        elif initial_node_method == 'min_avg_distance':
+            # Calculate average distance for each node
+            avg_distances = np.mean(distance_matrix, axis=1)
+            first_node = np.argmin(avg_distances)
+        elif initial_node_method == 'min_max_distance':
+            # Choose node with minimum maximum distance
+            max_distances = np.max(distance_matrix, axis=1)
+            first_node = np.argmin(max_distances)
+        elif initial_node_method == 'random':
+            first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        else:  # specific node
+            try:
+                first_node = int(initial_node_method)
+                if not (0 <= first_node < num_cities):
+                    first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+            except (ValueError, TypeError):
+                first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        
+        return InsertOperator(node=first_node, position=0), {}
+    
+    # If no unvisited nodes, return None
+    if not unvisited_nodes:
+        return None, {}
+    
+    # Check if we're in early construction phase using adaptive threshold
+    percent_complete = len(visited_nodes) / num_cities
+    in_early_phase = percent_complete < early_phase_threshold
+    
+    best_node = None
+    best_position = None
+    best_cost_increase = float('inf')
+    
+    # Iterate through all unvisited nodes
+    for node in unvisited_nodes:
+        # Try inserting at every possible position in the current tour
+        for position in range(len(current_tour) + 1):
+            # Calculate cost increase for this insertion
+            if len(current_tour) == 1:
+                # Special case: only one node in tour
+                if position == 0:
+                    cost_increase = distance_matrix[node][current_tour[0]] + distance_matrix[current_tour[0]][node]
+                else:
+                    cost_increase = distance_matrix[current_tour[0]][node] + distance_matrix[node][current_tour[0]]
+            elif position == 0:
+                # Insert at beginning
+                cost_increase = (distance_matrix[node][current_tour[0]] + 
+                                distance_matrix[current_tour[-1]][node] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            elif position == len(current_tour):
+                # Insert at end
+                cost_increase = (distance_matrix[current_tour[-1]][node] + 
+                                distance_matrix[node][current_tour[0]] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            else:
+                # Insert in middle
+                cost_increase = (distance_matrix[current_tour[position-1]][node] + 
+                                distance_matrix[node][current_tour[position]] - 
+                                distance_matrix[current_tour[position-1]][current_tour[position]])
+            
+            # Apply adaptive end-position bias during early construction phase
+            if in_early_phase and (position == 0 or position == len(current_tour)):
+                cost_increase *= early_phase_bias
+            
+            # Update best insertion if this is better
+            if cost_increase < best_cost_increase:
+                best_cost_increase = cost_increase
+                best_node = node
+                best_position = position
+    
+    # Return the best insertion operator if found
+    if best_node is not None:
+        return InsertOperator(node=best_node, position=best_position), {}
+    else:
+        return None, {}
+***
+------------------------------------------------------------------------------------
+
+user
+To assess the performance of the evolved heuristics, I have tested both the original heuristic greedy_insertion_c87c and the evolved heuristic greedy_insertion_3c02.
+The following table presents a comparative analysis of these heuristics. The first 13 columns represent the features of the testing data, while the remaining columns show the results.
+A lower result indicates better performance, and the improvement ratio (in brackets, positive means to improve and negative means decline) reflects the enhancement relative to greedy_insertion_c87c.
+
+data_name	num_cities	distance_matrix_mean	distance_matrix_std	distance_matrix_skew	min_x	max_x	min_y	max_y	centroid_x	centroid_y	avg_nearest_neighbor_dist	fraction_convex_hull	greedy_insertion_c87c	greedy_insertion_3c02
+gr17.tsp	17	274.60	162.83	0.55	0.0	633.0	0.0	633.0	242.0	242.0	74.0	0.59	2309.0(0.0)	2395.0(-0.04)
+gr21.tsp	21	363.89	187.25	0.27	0.0	655.0	0.0	655.0	314.48	314.48	94.48	0.51	3040.0(0.0)	3245.0(-0.07)
+kroC100.tsp	100	1700.55	910.74	0.39	0.0	2875.0	0.0	2875.0	1556.72	1556.72	140.19	0.54	25039.0(0.0)	24297.0(0.03)
+
+It is evident that in some scenarios, the new heuristic performs well, although there is still room for improvement. Based on the results, please analyze the following:
+1. In which cases does the new heuristic perform well, and in which cases is it not satisfactory?
+2. What factors contribute to these differences in performance?
+3. Is the updated heuristic greedy_insertion_3c02 better than previous heuristic greedy_insertion_c87c and is the previous evolution suggestion Update the initial node selection logic to choose nodes with the lowest average distance to all other nodes when starting from an empty tour. Add a new hyperparameter "initial_node_selection" with options "random", "min_avg_distance", "min_max_distance", or a specific node ID. For empty tours, calculate the average distance for each node and select the one with minimum average distance. This will ensure the algorithm starts with a central node like node 1 (avg distance 353.94) instead of node 4 (avg distance 412.0), leading to better tour construction from the beginning.
+
+Specifically, add this logic at the beginning of the function:
+```python
+# If solution is empty, choose optimal starting node
+if not current_tour:
+    initial_method = kwargs.get('initial_node_selection', 'min_avg_distance')
+    
+    if initial_method == 'min_avg_distance':
+        # Calculate average distance for each node
+        avg_distances = np.mean(distance_matrix, axis=1)
+        first_node = np.argmin(avg_distances)
+    elif initial_method == 'min_max_distance':
+        # Choose node with minimum maximum distance
+        max_distances = np.max(distance_matrix, axis=1)
+        first_node = np.argmin(max_distances)
+    elif initial_method == 'random':
+        first_node = np.random.choice(list(range(num_cities)))
+    else:  # specific node
+        first_node = initial_method if 0 <= initial_method < num_cities else np.random.choice(list(range(num_cities)))
+    
+    return InsertOperator(node=first_node, position=0), {}
+```
+
+This suggestion is clear and achievable as it uses readily available distance matrix data. It will output InsertOperator(node=1, position=0) in this step since node 1 has the lowest average distance (289.0) among all nodes. This improvement should lead to better overall tour construction and potentially beat the 2159.0 benchmark. The update is universally useful for all TSP instances as starting with central nodes generally improves greedy insertion performance. works?
+4. How can we further refine the new heuristics?
+
+We believe that further refinement of the new heuristic is necessary.
+
+Please analyze the results and provide one executable code adjustment suggestion (in word, not code).
+
+We believe the idea is correct: Update the initial node selection logic to choose nodes with the lowest average distance to all other nodes when starting from an empty tour. Add a new hyperparameter "initial_node_selection" with options "random", "min_avg_distance", "min_max_distance", or a specific node ID. For empty tours, calculate the average distance for each node and select the one with minimum average distance. This will ensure the algorithm starts with a central node like node 1 (avg distance 353.94) instead of node 4 (avg distance 412.0), leading to better tour construction from the beginning.
+
+Specifically, add this logic at the beginning of the function:
+```python
+# If solution is empty, choose optimal starting node
+if not current_tour:
+    initial_method = kwargs.get('initial_node_selection', 'min_avg_distance')
+    
+    if initial_method == 'min_avg_distance':
+        # Calculate average distance for each node
+        avg_distances = np.mean(distance_matrix, axis=1)
+        first_node = np.argmin(avg_distances)
+    elif initial_method == 'min_max_distance':
+        # Choose node with minimum maximum distance
+        max_distances = np.max(distance_matrix, axis=1)
+        first_node = np.argmin(max_distances)
+    elif initial_method == 'random':
+        first_node = np.random.choice(list(range(num_cities)))
+    else:  # specific node
+        first_node = initial_method if 0 <= initial_method < num_cities else np.random.choice(list(range(num_cities)))
+    
+    return InsertOperator(node=first_node, position=0), {}
+```
+
+This suggestion is clear and achievable as it uses readily available distance matrix data. It will output InsertOperator(node=1, position=0) in this step since node 1 has the lowest average distance (289.0) among all nodes. This improvement should lead to better overall tour construction and potentially beat the 2159.0 benchmark. The update is universally useful for all TSP instances as starting with central nodes generally improves greedy insertion performance..
+While we need detailed refinement, such as:
+1. This may involve changing default values or adopting dynamic values tailored to specific data.
+2. This includes aspects such as operation type, subject, location, and timing.
+3. Should we continue to deepen origin suggestion or weaken this suggestion.
+
+The response format is very important. For better communication, please respond to me in this format:
+1. If you believe the code still need to be updated, please respond to me in this format:
+***refinement: 
+result analysis: xxx
+code adjustment suggestion: xxx
+***
+2. If you think current heuristic are good enough, please respond to me in this format:
+***refinement: 
+result analysis: None
+code adjustment suggestion: None
+***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***refinement: 
+result analysis: The new heuristic performs well on larger instances (kroC100.tsp with 3% improvement) but shows performance degradation on smaller instances (gr17.tsp -4%, gr21.tsp -7%). This suggests that while starting with central nodes benefits larger problems, it may lead to suboptimal initial choices in smaller instances where local connectivity patterns are more critical than global centrality. The distance matrix characteristics (skewness, std) also influence performance, with better results on instances having higher distance variability.
+
+code adjustment suggestion: Implement adaptive initial node selection that considers both problem size and distance matrix characteristics. For smaller instances (num_cities < 30), use a hybrid approach that selects nodes with the best local connectivity (minimum distance to nearest neighbors) rather than global centrality. For larger instances, maintain the current min_avg_distance approach. Add a size-based threshold parameter (e.g., small_instance_threshold=30) and dynamically switch between local connectivity (min of row minimums) for small instances and global centrality for larger instances.
+***
+------------------------------------------------------------------------------------
+
+user
+Based on previous discuss, we get the heuristic greedy_insertion:
+Now, based on these suggestions:
+ Implement adaptive initial node selection that considers both problem size and distance matrix characteristics. For smaller instances (num_cities < 30), use a hybrid approach that selects nodes with the best local connectivity (minimum distance to nearest neighbors) rather than global centrality. For larger instances, maintain the current min_avg_distance approach. Add a size-based threshold parameter (e.g., small_instance_threshold=30) and dynamically switch between local connectivity (min of row minimums) for small instances and global centrality for larger instances.
+Update the greedy_insertion_3c02.
+
+Now please implement it in python function greedy_insertion_8d81.
+
+
+The response format is very important. For better communication, please respond to me in this format:
+***python_code:
+from src.problems.tsp.components import *
+import other_library (if necessary)
+def greedy_insertion_8d81(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[TargetOperatorType, dict]:
+    """ Description for this heuristic algorithm.
+
+    Args:
+        problem_state (dict): The dictionary contains the problem state.. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no algorithm data) algorithm_data (dict): The algorithm dictionary for current algorithm only. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no hyper parameters data) introduction for hyper parameters in kwargs if used.
+
+    Returns:
+        Description of this operator.
+        Description of updated algorithm data.
+
+        ...
+    """
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+
+------------------------------------------------------------------------------------
+
+assistant
+***python_code:
+from src.problems.tsp.components import *
+import numpy as np
+from typing import Optional
+
+def greedy_insertion_8d81(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[Optional[InsertOperator], dict]:
+    """Adaptive greedy insertion heuristic with size-aware initial node selection.
+    
+    This algorithm builds a tour by iteratively inserting unvisited nodes. For each unvisited node,
+    it calculates the minimum cost increase when inserted at any position. The algorithm features
+    adaptive initial node selection that considers both problem size and distance matrix characteristics.
+    For smaller instances, it prioritizes local connectivity, while for larger instances it uses
+    global centrality measures.
+    
+    Args:
+        problem_state (dict): The dictionary contains the problem state. In this algorithm:
+            - distance_matrix (numpy.ndarray): 2D array of distances between nodes
+            - current_solution (Solution): Current partial or complete solution
+            - num_cities (int): Total number of nodes
+            - validation_solution (callable): Function to validate solution feasibility
+        algorithm_data (dict): Not used in this algorithm, maintained for interface consistency
+        **kwargs: Hyper-parameters:
+            - initial_node_selection (str, default='adaptive'): Method for initial node selection.
+              Options: 'adaptive', 'min_avg_distance', 'min_max_distance', 'min_local_distance', 'random', or specific node ID
+            - small_instance_threshold (int, default=30): Size threshold for switching between local and global strategies
+            - start_node (int, default=None): Starting node for construction (overrides initial_node_selection)
+            - max_iterations (int, default=1000): Maximum iterations to prevent infinite loops
+            - base_threshold (float, default=0.4): Base value for early phase threshold
+            - threshold_range (float, default=0.3): Maximum adjustment range for threshold
+            - threshold_decay (float, default=2.0): Decay factor for threshold exponential adjustment
+            - base_bias (float, default=0.8): Base value for bias factor
+            - bias_range (float, default=0.15): Maximum adjustment range for bias
+            - bias_decay (float, default=3.0): Decay factor for bias exponential adjustment
+            - size_threshold (float, default=50.0): Reference size for problem size scaling
+            - size_threshold_factor (float, default=0.1): Scaling factor for threshold size adjustment
+            - size_bias_factor (float, default=0.1): Scaling factor for bias size adjustment
+            
+    Returns:
+        InsertOperator: Operator to insert the best node at the best position, or None if no valid insertion found
+        dict: Empty dictionary as no algorithm data is updated
+        
+    Notes:
+        - Returns None if current solution already contains all nodes
+        - Returns None if no unvisited nodes can be feasibly inserted
+        - Uses adaptive initial node selection based on problem size and distance characteristics
+        - For small instances (< threshold), prioritizes local connectivity (minimum nearest neighbor distance)
+        - For large instances, uses global centrality (minimum average distance)
+        - Ensures solution remains valid by checking for duplicate nodes
+    """
+    
+    # Extract necessary problem state components
+    distance_matrix = problem_state['distance_matrix']
+    current_solution = problem_state['current_solution']
+    num_cities = problem_state['num_cities']
+    validation_solution = problem_state['validation_solution']
+    distance_matrix_skew = problem_state.get('distance_matrix_skew', 0.0)
+    
+    # Set hyper-parameters with defaults
+    initial_node_method = kwargs.get('initial_node_selection', 'adaptive')
+    small_instance_threshold = kwargs.get('small_instance_threshold', 30)
+    start_node = kwargs.get('start_node', None)
+    max_iterations = kwargs.get('max_iterations', 1000)
+    base_threshold = kwargs.get('base_threshold', 0.4)
+    threshold_range = kwargs.get('threshold_range', 0.3)
+    threshold_decay = kwargs.get('threshold_decay', 2.0)
+    base_bias = kwargs.get('base_bias', 0.8)
+    bias_range = kwargs.get('bias_range', 0.15)
+    bias_decay = kwargs.get('bias_decay', 3.0)
+    size_threshold = kwargs.get('size_threshold', 50.0)
+    size_threshold_factor = kwargs.get('size_threshold_factor', 0.1)
+    size_bias_factor = kwargs.get('size_bias_factor', 0.1)
+    
+    # Calculate logarithmic size scaling factors
+    capped_size = min(num_cities, size_threshold)
+    size_scale_threshold = 1 - (size_threshold_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    size_scale_bias = 1 + (size_bias_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    
+    # Calculate adaptive parameters using exponential smoothing and logarithmic size scaling
+    early_phase_threshold = base_threshold + (threshold_range * (1 - np.exp(-threshold_decay * distance_matrix_skew))) * size_scale_threshold
+    early_phase_bias = base_bias - (bias_range * (1 - np.exp(-bias_decay * distance_matrix_skew))) * size_scale_bias
+    
+    current_tour = current_solution.tour.copy()
+    visited_nodes = set(current_tour)
+    unvisited_nodes = set(range(num_cities)) - visited_nodes
+    
+    # If solution is already complete, return None
+    if len(visited_nodes) == num_cities:
+        return None, {}
+    
+    # If solution is empty, use adaptive initial node selection
+    if not current_tour:
+        if start_node is not None and 0 <= start_node < num_cities:
+            first_node = start_node
+        elif initial_node_method == 'adaptive':
+            # Adaptive selection based on problem size
+            if num_cities < small_instance_threshold:
+                # For small instances: prioritize local connectivity
+                min_distances = np.min(distance_matrix + np.diag([np.inf] * num_cities), axis=1)
+                first_node = np.argmin(min_distances)
+            else:
+                # For large instances: use global centrality
+                avg_distances = np.mean(distance_matrix, axis=1)
+                first_node = np.argmin(avg_distances)
+        elif initial_node_method == 'min_avg_distance':
+            avg_distances = np.mean(distance_matrix, axis=1)
+            first_node = np.argmin(avg_distances)
+        elif initial_node_method == 'min_max_distance':
+            max_distances = np.max(distance_matrix, axis=1)
+            first_node = np.argmin(max_distances)
+        elif initial_node_method == 'min_local_distance':
+            min_distances = np.min(distance_matrix + np.diag([np.inf] * num_cities), axis=1)
+            first_node = np.argmin(min_distances)
+        elif initial_node_method == 'random':
+            first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        else:  # specific node
+            try:
+                first_node = int(initial_node_method)
+                if not (0 <= first_node < num_cities):
+                    first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+            except (ValueError, TypeError):
+                first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        
+        return InsertOperator(node=first_node, position=0), {}
+    
+    # If no unvisited nodes, return None
+    if not unvisited_nodes:
+        return None, {}
+    
+    # Check if we're in early construction phase using adaptive threshold
+    percent_complete = len(visited_nodes) / num_cities
+    in_early_phase = percent_complete < early_phase_threshold
+    
+    best_node = None
+    best_position = None
+    best_cost_increase = float('inf')
+    
+    # Iterate through all unvisited nodes
+    for node in unvisited_nodes:
+        # Try inserting at every possible position in the current tour
+        for position in range(len(current_tour) + 1):
+            # Calculate cost increase for this insertion
+            if len(current_tour) == 1:
+                # Special case: only one node in tour
+                if position == 0:
+                    cost_increase = distance_matrix[node][current_tour[0]] + distance_matrix[current_tour[0]][node]
+                else:
+                    cost_increase = distance_matrix[current_tour[0]][node] + distance_matrix[node][current_tour[0]]
+            elif position == 0:
+                # Insert at beginning
+                cost_increase = (distance_matrix[node][current_tour[0]] + 
+                                distance_matrix[current_tour[-1]][node] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            elif position == len(current_tour):
+                # Insert at end
+                cost_increase = (distance_matrix[current_tour[-1]][node] + 
+                                distance_matrix[node][current_tour[0]] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            else:
+                # Insert in middle
+                cost_increase = (distance_matrix[current_tour[position-1]][node] + 
+                                distance_matrix[node][current_tour[position]] - 
+                                distance_matrix[current_tour[position-1]][current_tour[position]])
+            
+            # Apply adaptive end-position bias during early construction phase
+            if in_early_phase and (position == 0 or position == len(current_tour)):
+                cost_increase *= early_phase_bias
+            
+            # Update best insertion if this is better
+            if cost_increase < best_cost_increase:
+                best_cost_increase = cost_increase
+                best_node = node
+                best_position = position
+    
+    # Return the best insertion operator if found
+    if best_node is not None:
+        return InsertOperator(node=best_node, position=best_position), {}
+    else:
+        return None, {}
+***
+------------------------------------------------------------------------------------
+
+user
+To assess the performance of the evolved heuristics, I have tested both the original heuristic greedy_insertion_c87c and the evolved heuristic greedy_insertion_8d81.
+The following table presents a comparative analysis of these heuristics. The first 13 columns represent the features of the testing data, while the remaining columns show the results.
+A lower result indicates better performance, and the improvement ratio (in brackets, positive means to improve and negative means decline) reflects the enhancement relative to greedy_insertion_c87c.
+
+data_name	num_cities	distance_matrix_mean	distance_matrix_std	distance_matrix_skew	min_x	max_x	min_y	max_y	centroid_x	centroid_y	avg_nearest_neighbor_dist	fraction_convex_hull	greedy_insertion_c87c	greedy_insertion_3c02	greedy_insertion_8d81
+gr17.tsp	17	274.60	162.83	0.55	0.0	633.0	0.0	633.0	242.0	242.0	74.0	0.59	2309.0	2395.0(-0.04)	2230.0(0.03)
+gr21.tsp	21	363.89	187.25	0.27	0.0	655.0	0.0	655.0	314.48	314.48	94.48	0.51	3040.0	3245.0(-0.07)	3245.0(-0.07)
+kroC100.tsp	100	1700.55	910.74	0.39	0.0	2875.0	0.0	2875.0	1556.72	1556.72	140.19	0.54	25039.0	24297.0(0.03)	24297.0(0.03)
+
+It is evident that in some scenarios, the new heuristic performs well, although there is still room for improvement. Based on the results, please analyze the following:
+1. In which cases does the new heuristic perform well, and in which cases is it not satisfactory?
+2. What factors contribute to these differences in performance?
+3. Is the updated heuristic greedy_insertion_8d81 better than previous heuristic greedy_insertion_3c02 and is the previous evolution suggestion  Implement adaptive initial node selection that considers both problem size and distance matrix characteristics. For smaller instances (num_cities < 30), use a hybrid approach that selects nodes with the best local connectivity (minimum distance to nearest neighbors) rather than global centrality. For larger instances, maintain the current min_avg_distance approach. Add a size-based threshold parameter (e.g., small_instance_threshold=30) and dynamically switch between local connectivity (min of row minimums) for small instances and global centrality for larger instances. works?
+4. How can we further refine the new heuristics?
+
+We believe that further refinement of the new heuristic is necessary.
+
+Please analyze the results and provide one executable code adjustment suggestion (in word, not code).
+
+We believe the idea is correct:  Implement adaptive initial node selection that considers both problem size and distance matrix characteristics. For smaller instances (num_cities < 30), use a hybrid approach that selects nodes with the best local connectivity (minimum distance to nearest neighbors) rather than global centrality. For larger instances, maintain the current min_avg_distance approach. Add a size-based threshold parameter (e.g., small_instance_threshold=30) and dynamically switch between local connectivity (min of row minimums) for small instances and global centrality for larger instances..
+While we need detailed refinement, such as:
+1. This may involve changing default values or adopting dynamic values tailored to specific data.
+2. This includes aspects such as operation type, subject, location, and timing.
+3. Should we continue to deepen origin suggestion or weaken this suggestion.
+
+The response format is very important. For better communication, please respond to me in this format:
+1. If you believe the code still need to be updated, please respond to me in this format:
+***refinement: 
+result analysis: xxx
+code adjustment suggestion: xxx
+***
+2. If you think current heuristic are good enough, please respond to me in this format:
+***refinement: 
+result analysis: None
+code adjustment suggestion: None
+***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***refinement: 
+result analysis: The new heuristic greedy_insertion_8d81 shows excellent performance on gr17.tsp (3% improvement) and maintains good performance on kroC100.tsp (3% improvement), but still struggles with gr21.tsp (-7% degradation). The adaptive strategy works well for very small instances (gr17) and large instances (kroC100), but the threshold of 30 may be too high for instances like gr21 (21 nodes) where local connectivity selection might not be optimal. The distance matrix characteristics (lower skewness of 0.27 in gr21 vs 0.55 in gr17) suggest that different strategies may be needed based on distance distribution patterns.
+
+code adjustment suggestion: Refine the adaptive threshold to be dynamic based on distance matrix characteristics rather than a fixed size threshold. Use a combination of problem size and distance matrix skewness to determine the optimal strategy. For instances with high skewness (>0.4), use local connectivity even for medium-sized problems, while for more uniform distributions, use global centrality. Add a skewness_threshold parameter (e.g., 0.4) and modify the adaptive logic to consider both size and skewness: if num_cities < small_instance_threshold OR distance_matrix_skew > skewness_threshold, use local connectivity; otherwise use global centrality.
+***
+------------------------------------------------------------------------------------
+
+user
+Based on previous discuss, we get the heuristic greedy_insertion:
+Now, based on these suggestions:
+ if num_cities < small_instance_threshold OR distance_matrix_skew > skewness_threshold, use local connectivity; otherwise use global centrality.
+Update the greedy_insertion_8d81.
+
+Now please implement it in python function greedy_insertion_7559.
+
+
+The response format is very important. For better communication, please respond to me in this format:
+***python_code:
+from src.problems.tsp.components import *
+import other_library (if necessary)
+def greedy_insertion_7559(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[TargetOperatorType, dict]:
+    """ Description for this heuristic algorithm.
+
+    Args:
+        problem_state (dict): The dictionary contains the problem state.. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no algorithm data) algorithm_data (dict): The algorithm dictionary for current algorithm only. In this algorithm, the following items are necessary:
+            - necessary_key (value type): description
+            - necessary_key (value type): description
+            ...
+        (Optional and can be omitted if no hyper parameters data) introduction for hyper parameters in kwargs if used.
+
+    Returns:
+        Description of this operator.
+        Description of updated algorithm data.
+
+        ...
+    """
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+
+------------------------------------------------------------------------------------
+
+assistant
+***python_code:
+from src.problems.tsp.components import *
+import numpy as np
+from typing import Optional
+
+def greedy_insertion_7559(problem_state: dict, algorithm_data: dict, **kwargs) -> tuple[Optional[InsertOperator], dict]:
+    """Enhanced adaptive greedy insertion heuristic with skewness-aware initial node selection.
+    
+    This algorithm builds a tour by iteratively inserting unvisited nodes. For each unvisited node,
+    it calculates the minimum cost increase when inserted at any position. The algorithm features
+    advanced adaptive initial node selection that considers both problem size and distance matrix
+    skewness characteristics. Uses local connectivity for small instances or highly skewed distributions,
+    and global centrality for larger instances with more uniform distributions.
+    
+    Args:
+        problem_state (dict): The dictionary contains the problem state. In this algorithm:
+            - distance_matrix (numpy.ndarray): 2D array of distances between nodes
+            - current_solution (Solution): Current partial or complete solution
+            - num_cities (int): Total number of nodes
+            - validation_solution (callable): Function to validate solution feasibility
+            - distance_matrix_skew (float): Skewness of the distance distribution
+        algorithm_data (dict): Not used in this algorithm, maintained for interface consistency
+        **kwargs: Hyper-parameters:
+            - initial_node_selection (str, default='adaptive'): Method for initial node selection.
+              Options: 'adaptive', 'min_avg_distance', 'min_max_distance', 'min_local_distance', 'random', or specific node ID
+            - small_instance_threshold (int, default=30): Size threshold for switching strategies
+            - skewness_threshold (float, default=0.4): Skewness threshold for using local connectivity
+            - start_node (int, default=None): Starting node for construction (overrides initial_node_selection)
+            - max_iterations (int, default=1000): Maximum iterations to prevent infinite loops
+            - base_threshold (float, default=0.4): Base value for early phase threshold
+            - threshold_range (float, default=0.3): Maximum adjustment range for threshold
+            - threshold_decay (float, default=2.0): Decay factor for threshold exponential adjustment
+            - base_bias (float, default=0.8): Base value for bias factor
+            - bias_range (float, default=0.15): Maximum adjustment range for bias
+            - bias_decay (float, default=3.0): Decay factor for bias exponential adjustment
+            - size_threshold (float, default=50.0): Reference size for problem size scaling
+            - size_threshold_factor (float, default=0.1): Scaling factor for threshold size adjustment
+            - size_bias_factor (float, default=0.1): Scaling factor for bias size adjustment
+            
+    Returns:
+        InsertOperator: Operator to insert the best node at the best position, or None if no valid insertion found
+        dict: Empty dictionary as no algorithm data is updated
+        
+    Notes:
+        - Returns None if current solution already contains all nodes
+        - Returns None if no unvisited nodes can be feasibly inserted
+        - Uses skewness-aware adaptive initial node selection
+        - For small instances (< threshold) OR highly skewed distributions (> threshold), uses local connectivity
+        - For large instances with uniform distributions, uses global centrality
+        - Ensures solution remains valid by checking for duplicate nodes
+    """
+    
+    # Extract necessary problem state components
+    distance_matrix = problem_state['distance_matrix']
+    current_solution = problem_state['current_solution']
+    num_cities = problem_state['num_cities']
+    validation_solution = problem_state['validation_solution']
+    distance_matrix_skew = problem_state.get('distance_matrix_skew', 0.0)
+    
+    # Set hyper-parameters with defaults
+    initial_node_method = kwargs.get('initial_node_selection', 'adaptive')
+    small_instance_threshold = kwargs.get('small_instance_threshold', 30)
+    skewness_threshold = kwargs.get('skewness_threshold', 0.4)
+    start_node = kwargs.get('start_node', None)
+    max_iterations = kwargs.get('max_iterations', 1000)
+    base_threshold = kwargs.get('base_threshold', 0.4)
+    threshold_range = kwargs.get('threshold_range', 0.3)
+    threshold_decay = kwargs.get('threshold_decay', 2.0)
+    base_bias = kwargs.get('base_bias', 0.8)
+    bias_range = kwargs.get('bias_range', 0.15)
+    bias_decay = kwargs.get('bias_decay', 3.0)
+    size_threshold = kwargs.get('size_threshold', 50.0)
+    size_threshold_factor = kwargs.get('size_threshold_factor', 0.1)
+    size_bias_factor = kwargs.get('size_bias_factor', 0.1)
+    
+    # Calculate logarithmic size scaling factors
+    capped_size = min(num_cities, size_threshold)
+    size_scale_threshold = 1 - (size_threshold_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    size_scale_bias = 1 + (size_bias_factor * np.log1p(capped_size) / np.log1p(size_threshold))
+    
+    # Calculate adaptive parameters using exponential smoothing and logarithmic size scaling
+    early_phase_threshold = base_threshold + (threshold_range * (1 - np.exp(-threshold_decay * distance_matrix_skew))) * size_scale_threshold
+    early_phase_bias = base_bias - (bias_range * (1 - np.exp(-bias_decay * distance_matrix_skew))) * size_scale_bias
+    
+    current_tour = current_solution.tour.copy()
+    visited_nodes = set(current_tour)
+    unvisited_nodes = set(range(num_cities)) - visited_nodes
+    
+    # If solution is already complete, return None
+    if len(visited_nodes) == num_cities:
+        return None, {}
+    
+    # If solution is empty, use skewness-aware adaptive initial node selection
+    if not current_tour:
+        if start_node is not None and 0 <= start_node < num_cities:
+            first_node = start_node
+        elif initial_node_method == 'adaptive':
+            # Adaptive selection based on problem size and skewness
+            use_local_connectivity = (num_cities < small_instance_threshold or 
+                                     distance_matrix_skew > skewness_threshold)
+            
+            if use_local_connectivity:
+                # Use local connectivity: minimum distance to nearest neighbor
+                min_distances = np.min(distance_matrix + np.diag([np.inf] * num_cities), axis=1)
+                first_node = np.argmin(min_distances)
+            else:
+                # Use global centrality: minimum average distance
+                avg_distances = np.mean(distance_matrix, axis=1)
+                first_node = np.argmin(avg_distances)
+        elif initial_node_method == 'min_avg_distance':
+            avg_distances = np.mean(distance_matrix, axis=1)
+            first_node = np.argmin(avg_distances)
+        elif initial_node_method == 'min_max_distance':
+            max_distances = np.max(distance_matrix, axis=1)
+            first_node = np.argmin(max_distances)
+        elif initial_node_method == 'min_local_distance':
+            min_distances = np.min(distance_matrix + np.diag([np.inf] * num_cities), axis=1)
+            first_node = np.argmin(min_distances)
+        elif initial_node_method == 'random':
+            first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        else:  # specific node
+            try:
+                first_node = int(initial_node_method)
+                if not (0 <= first_node < num_cities):
+                    first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+            except (ValueError, TypeError):
+                first_node = np.random.choice(list(range(num_cities))) if num_cities > 0 else 0
+        
+        return InsertOperator(node=first_node, position=0), {}
+    
+    # If no unvisited nodes, return None
+    if not unvisited_nodes:
+        return None, {}
+    
+    # Check if we're in early construction phase using adaptive threshold
+    percent_complete = len(visited_nodes) / num_cities
+    in_early_phase = percent_complete < early_phase_threshold
+    
+    best_node = None
+    best_position = None
+    best_cost_increase = float('inf')
+    
+    # Iterate through all unvisited nodes
+    for node in unvisited_nodes:
+        # Try inserting at every possible position in the current tour
+        for position in range(len(current_tour) + 1):
+            # Calculate cost increase for this insertion
+            if len(current_tour) == 1:
+                # Special case: only one node in tour
+                if position == 0:
+                    cost_increase = distance_matrix[node][current_tour[0]] + distance_matrix[current_tour[0]][node]
+                else:
+                    cost_increase = distance_matrix[current_tour[0]][node] + distance_matrix[node][current_tour[0]]
+            elif position == 0:
+                # Insert at beginning
+                cost_increase = (distance_matrix[node][current_tour[0]] + 
+                                distance_matrix[current_tour[-1]][node] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            elif position == len(current_tour):
+                # Insert at end
+                cost_increase = (distance_matrix[current_tour[-1]][node] + 
+                                distance_matrix[node][current_tour[0]] - 
+                                distance_matrix[current_tour[-1]][current_tour[0]])
+            else:
+                # Insert in middle
+                cost_increase = (distance_matrix[current_tour[position-1]][node] + 
+                                distance_matrix[node][current_tour[position]] - 
+                                distance_matrix[current_tour[position-1]][current_tour[position]])
+            
+            # Apply adaptive end-position bias during early construction phase
+            if in_early_phase and (position == 0 or position == len(current_tour)):
+                cost_increase *= early_phase_bias
+            
+            # Update best insertion if this is better
+            if cost_increase < best_cost_increase:
+                best_cost_increase = cost_increase
+                best_node = node
+                best_position = position
+    
+    # Return the best insertion operator if found
+    if best_node is not None:
+        return InsertOperator(node=best_node, position=best_position), {}
+    else:
+        return None, {}
+***
+------------------------------------------------------------------------------------
+
