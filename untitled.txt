@@ -1,0 +1,45 @@
+代码中与大模型（LLM）的交互主要围绕启发式算法的进化优化展开，每次交互都有明确的目标，具体如下：
+
+
+### 1. **验证问题是否为组合优化问题（`load_background` 中的交互）**
+- **触发位置**：`evolution_single` 方法中通过 `self.llm_client.load_background` 加载 `background_with_code` 提示。
+- **目的**：  
+  向LLM提供问题描述、解决方案框架（`Solution` 和 `Operator` 类）等信息，确认当前问题是否属于组合优化问题（CO问题），确保后续启发式进化流程的适用性。  
+- **交互依据**：  
+  基于 `background_with_code.txt` 提示模板，LLM需返回 `***is_cop:yes/no***` 来判断问题类型。
+
+
+### 2. **识别基础启发式的瓶颈操作（`identity_bottlenecks` 中的交互）**
+- **触发位置**：`identity_bottlenecks` 方法中加载 `identify_bottleneck` 提示。
+- **目的**：  
+  对比基础启发式生成的较差解（`negative_result`）和扰动算法生成的更优解（`positive_result`），让LLM分析并找出导致性能差距的“瓶颈操作”（即基础启发式中决策不佳的步骤）。  
+- **交互依据**：  
+  基于 `identify_bottleneck.txt` 提示模板，LLM需返回瓶颈操作的ID、建议的改进操作及理由，格式为 `操作ID;建议操作;理由`。
+
+
+### 3. **生成改进启发式的建议（`raise_suggestion` 中的交互）**
+- **触发位置**：`raise_suggestion` 方法中加载 `extract_suggestion` 提示。
+- **目的**：  
+  针对已识别的瓶颈操作，让LLM基于问题状态、瓶颈上下文及其他启发式的参考信息，生成具体的代码改进建议（如调整超参数、添加逻辑判断等），以优化基础启发式。  
+- **交互依据**：  
+  基于 `extract_suggestion.txt` 提示模板，LLM需提供可执行的改进方向，确保能指导后续代码生成。
+
+
+### 4. **基于建议生成新的启发式代码（`HeuristicGenerator.generate` 中的交互）**
+- **触发位置**：`raise_suggestion` 和 `refine_heuristic` 中调用 `HeuristicGenerator.generate` 时，间接触发LLM生成代码。
+- **目的**：  
+  根据LLM提出的改进建议，生成可执行的启发式算法代码，确保代码符合预设的函数签名（输入为 `problem_state` 和 `algorithm_data`，输出为操作符和更新数据）。  
+- **交互依据**：  
+  基于 `implement_code_with_reminder.txt` 或 `implement_code_without_reminder.txt` 模板，LLM需生成完整的Python函数代码。
+
+
+### 5. **进一步微调进化后的启发式（`refine_heuristic` 中的交互）**
+- **触发位置**：`refine_heuristic` 方法中加载 `refinement` 提示。
+- **目的**：  
+  对比多轮优化后的启发式性能（基础启发式、上一轮启发式、当前启发式），让LLM分析改进效果，决定是否需要进一步调整（如深化或弱化之前的建议），并生成新的优化建议。  
+- **交互依据**：  
+  基于 `refinement.txt` 提示模板，LLM需返回结果分析和代码调整建议，或确认当前启发式已足够优秀。
+
+
+### 总结：LLM在流程中的核心作用
+LLM的交互贯穿启发式进化的全流程，从问题验证、瓶颈识别、改进建议生成到代码实现与迭代优化，其核心目标是**利用大模型的推理能力，自主发现启发式算法的缺陷并生成针对性改进方案**，最终实现启发式性能的逐步提升。每次交互都通过严格的提示模板约束输出格式，确保后续代码能正确解析和执行。
