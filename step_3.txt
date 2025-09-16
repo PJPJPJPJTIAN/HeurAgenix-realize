@@ -1,0 +1,135 @@
+user
+I am working on Hyper-heuristics for Combinatorial Operation (CO) problem.
+
+Currently, I am working on tsp problem:
+Traveling Salesman Problem (TSP) is the challenge of finding the shortest possible route that visits a given list of cities exactly once and returns to the origin city, based on the distances between each pair of cities.
+
+
+Please consider is tsp a combinatorial operation problem and can be solved by heuristics?
+If you think this problem is not a combinatorial operation problem or the solution, operator, data are incorrect, response ***is_cop:no*** to me, or response ***is_cop:yes***.
+
+The response format is very important. For better communication, please respond to me in this format:
+***is_cop:yes/no***
+Ensure there is no other content inside the ***, and analysis outside *** is welcome.
+If you have no information to provide, simply respond with ***None***.
+------------------------------------------------------------------------------------
+
+assistant
+***is_cop:yes***
+
+Analysis: The Traveling Salesman Problem (TSP) is a quintessential combinatorial optimization problem. It involves finding the optimal permutation (order) of a set of cities to minimize the total travel distance. The solution space grows factorially with the number of cities, making an exhaustive search infeasible for large instances. Therefore, it is almost exclusively solved by heuristics (e.g., Nearest Neighbor, 2-opt, Genetic Algorithms) and meta-heuristics (like the Hyper-heuristics you are working on) which search this vast combinatorial space efficiently.
+------------------------------------------------------------------------------------
+
+user
+We have already implement the following heuristics.
+These are the heuristics in format: heuristic_name(parameter=default_value, ..): introduction
+def greedy_insertion_0206(): Enhanced greedy insertion heuristic for TSP with adaptive distance-to-centroid weighting. This algorithm builds a tour by iteratively inserting unvisited nodes using a weighted cost calculation that adaptively penalizes insertion of distant nodes based on problem characteristics. The weighting factor is scaled according to problem size and node distribution to optimize performance across different TSP instances.
+def greedy_insertion_22ac(): Enhanced greedy insertion heuristic for TSP with adaptive weighted centrality-based starting node selection. This algorithm starts with a partial tour and inserts unvisited nodes one by one. For each unvisited node, it calculates the minimum cost increase when inserted at any position in the current tour, then selects the node and position that minimizes the overall tour length increase. Key enhancement: When the tour is empty, selects the node using an adaptive weighted centrality measure that dynamically adjusts the weight based on problem characteristics.
+def greedy_insertion_250d(): Greedy insertion with regret-2 heuristic for TSP that builds a tour using regret-based node selection. This algorithm extends greedy insertion by considering not just the best insertion cost for each node, but also the difference between best and second-best positions (regret value). When the tour is more than 50% complete, it prioritizes nodes with high regret values to avoid getting trapped in local optima and ensure nodes with few good insertion opportunities are placed early.
+def greedy_insertion_4e4e(): Enhanced greedy insertion heuristic with spatial-aware adaptive lookahead penalty for TSP. This algorithm builds a tour by iteratively inserting unvisited nodes with a sophisticated cost function that considers both immediate insertion cost and future connectivity. The lookahead penalty adapts based on problem size, spatial distribution, and connectivity patterns: - Incorporates convex hull fraction and nearest neighbor distances for spatial awareness - Uses dynamic alpha adjustment based on multiple spatial metrics - Maintains adaptive behavior across different problem sizes and distributions
+def greedy_insertion_5c68(): Enhanced greedy insertion heuristic for TSP that builds a tour by iteratively inserting nodes. This algorithm starts with a partial tour and inserts unvisited nodes one by one. For each unvisited node, it calculates the minimum cost increase when inserted at any position in the current tour, then selects the node and position that minimizes the overall tour length increase. Key enhancement: When the tour is empty, selects the node with minimum average distance to all other nodes (highest centrality) rather than a random node.
+def greedy_insertion_6896(): Enhanced greedy insertion heuristic for TSP with weighted centrality-based starting node selection. This algorithm starts with a partial tour and inserts unvisited nodes one by one. For each unvisited node, it calculates the minimum cost increase when inserted at any position in the current tour, then selects the node and position that minimizes the overall tour length increase. Key enhancement: When the tour is empty, selects the node using a weighted centrality measure that considers both average distance and spatial distribution (standard deviation).
+def greedy_insertion_836c(): Enhanced greedy insertion heuristic with adaptive composite centrality scoring. This algorithm builds a TSP tour using greedy insertion with an improved starting node selection strategy. For all instance sizes, it uses a composite centrality score based on: 1) average distance to all nodes, 2) minimum distance to nearest neighbor, and 3) distance to geometric center. The weighting of these factors adapts based on instance size.
+def greedy_insertion_943a(): Enhanced greedy insertion heuristic for TSP with multi-criteria hybrid starting node selection. This algorithm starts with a partial tour and inserts unvisited nodes one by one. For each unvisited node, it calculates the minimum cost increase when inserted at any position in the current tour, then selects the node and position that minimizes the overall tour length increase. Key enhancement: When the tour is empty, selects the node using a hybrid approach that combines multiple criteria: centrality, local connectivity, and geographic position.
+def greedy_insertion_f99d(): Greedy insertion heuristic for TSP that builds a tour by iteratively inserting nodes. This algorithm starts with a partial tour and inserts unvisited nodes one by one. For each unvisited node, it calculates the minimum cost increase when inserted at any position in the current tour, then selects the node and position that minimizes the overall tour length increase.
+def greedy_insertion_ff74(): Enhanced greedy insertion heuristic for TSP with quartile-based peripheral detection. This algorithm builds a tour by iteratively inserting unvisited nodes using a modified cost calculation that applies adaptive penalties for inserting truly peripheral nodes at endpoints when the tour has significant structure. Peripheral nodes are identified based on the top quartile of centrality values rather than a fixed multiple of the mean.
+
+
+
+The instance problem state:
+node_num:17
+num_cities:17
+distance_matrix_mean:274.60
+distance_matrix_std:162.83
+distance_matrix_skew:0.55
+min_x:0.0
+max_x:633.0
+min_y:0.0
+max_y:633.0
+centroid_x:242.0
+centroid_y:242.0
+avg_nearest_neighbor_dist:74.0
+fraction_convex_hull:0.59
+Note: Some data are omitted due to space constraints.
+
+The solution problem state:
+current_solution:tour: 13->14->9->1->4->10->2->5->7->6->0->12->3->16->13
+current_cost:1516.0
+current_tour_length:1420.0
+percent_complete:82.35
+avg_added_edge_length:109.23
+std_added_edge_length:83.32
+min_added_edge_length:27.0
+max_added_edge_length:289.0
+num_unvisited_nodes:3
+current_head_node:16
+current_tail_node:13
+avg_distance_to_head:291.0
+min_distance_to_head:236.0
+avg_distance_to_tail:381.0
+min_distance_to_tail:326.0
+connectivity_ratio:0.37
+Note: Some data are omitted due to space constraints.
+
+We want to switch heuristics in real time to solve the problem. Each selected heuristic will be executed 5 steps.
+
+Before this discuss, we have already 3 rounds discuss and the most recent discussion is as follows:
+-----
+Selection Index: 0
+Heuristic: greedy_insertion_836c
+Delta of current_tour_length: From 0.0 to 165.0
+Delta of percent_complete: From 0.0 to 29.41
+Delta of avg_added_edge_length: From 0.0 to 41.25
+Delta of std_added_edge_length: From 0.0 to 10.30
+Delta of min_added_edge_length: From 0.0 to 29.0
+Delta of max_added_edge_length: From 0.0 to 55.0
+Delta of num_unvisited_nodes: From 17 to 12
+Delta of avg_distance_to_head: From 0.0 to 242.67
+Delta of min_distance_to_head: From inf to 84.0
+Delta of connectivity_ratio: From 0.0 to 0.12
+Delta of current_cost: From 0 to 200.0
+-----
+Selection Index: 1
+Heuristic: greedy_insertion_4e4e
+Delta of current_tour_length: From 165.0 to 546.0
+Delta of percent_complete: From 29.41 to 58.82
+Delta of avg_added_edge_length: From 41.25 to 60.67
+Delta of std_added_edge_length: From 10.30 to 27.00
+Delta of min_added_edge_length: From 29.0 to 27.0
+Delta of max_added_edge_length: From 55.0 to 112.0
+Delta of num_unvisited_nodes: From 12 to 7
+Delta of avg_distance_to_head: From 242.67 to 330.86
+Delta of min_distance_to_head: From 84.0 to 236.0
+Delta of connectivity_ratio: From 0.12 to 0.20
+Delta of current_cost: From 200.0 to 642.0
+-----
+Selection Index: 2
+Heuristic: greedy_insertion_250d
+Delta of current_tour_length: From 546.0 to 1420.0
+Delta of percent_complete: From 58.82 to 82.35
+Delta of avg_added_edge_length: From 60.67 to 109.23
+Delta of std_added_edge_length: From 27.00 to 83.32
+Delta of min_added_edge_length: From 27.0 to 27.0
+Delta of max_added_edge_length: From 112.0 to 289.0
+Delta of num_unvisited_nodes: From 7 to 3
+Delta of avg_distance_to_head: From 330.86 to 291.0
+Delta of min_distance_to_head: From 236.0 to 236.0
+Delta of connectivity_ratio: From 0.20 to 0.37
+Delta of current_cost: From 642.0 to 1516.0
+
+Now we hope to select heuristic for next 5 steps.
+
+Please select 1 heuristics as candidate heuristic for current state and put the one you think is most reasonable first.
+
+
+The response format is very important. For better communication, please respond to me in this format:
+analysis......
+***Selected heuristic: heuristic_name_1***
+Ensure there is no other content inside the ***.
+------------------------------------------------------------------------------------
+
+assistant
+analysis: The current state has 3 unvisited nodes (82.35% complete) with a relatively high average added edge length (109.23) and high standard deviation (83.32), indicating some long, potentially suboptimal edges. The tour has significant structure (connectivity_ratio: 0.37). The regret-based heuristic (greedy_insertion_250d) was just used and performed well, adding 5 nodes. However, with only 3 nodes left, a standard greedy insertion is likely sufficient and efficient. The spatial-aware lookahead penalty of greedy_insertion_4e4e could help optimize the final placements, especially given the high max added edge length (289.0), to avoid creating very long final edges. Its adaptive behavior based on spatial metrics is well-suited for this late stage.
+***Selected heuristic: greedy_insertion_4e4e***
+------------------------------------------------------------------------------------
+
