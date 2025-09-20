@@ -1,0 +1,60 @@
+- instance_data:
+    - vessel_num (int): The total number of vessels requesting berthing service.
+    - berth_num (int): The total number of berths available at the port.
+    - tugboat_num (int): The total number of tugboats available for service.
+    - time_periods (int): The total number of time periods in the scheduling horizon.
+    - vessel_sizes (numpy.ndarray): 1D array of size levels for each vessel (Si).
+    - berth_capacities (numpy.ndarray): 1D array of capacity levels for each berth (Cj).
+    - vessel_etas (numpy.ndarray): 1D array of expected arrival times for each vessel (ETAi).
+    - vessel_durations (numpy.ndarray): 1D array of berthing durations required by each vessel (Di).
+    - vessel_inbound_service_times (numpy.ndarray): 1D array of inbound tugboat service durations for each vessel.
+    - vessel_outbound_service_times (numpy.ndarray): 1D array of outbound tugboat service durations for each vessel.
+    - vessel_priority_weights (numpy.ndarray): 1D array of priority weights for each vessel.
+    - vessel_waiting_costs (numpy.ndarray): 1D array of unit waiting costs for each vessel.
+    - vessel_jit_costs (numpy.ndarray): 1D array of JIT deviation unit costs for each vessel.
+    - vessel_horsepower_requirements (numpy.ndarray): 1D array of minimum tugboat horsepower required by each vessel.
+    - tugboat_horsepower (numpy.ndarray): 1D array of horsepower for each tugboat.
+    - tugboat_costs (numpy.ndarray): 1D array of unit time usage costs for each tugboat.
+    - vessel_early_limits (numpy.ndarray): 1D array of maximum early arrival allowances for each vessel.
+    - vessel_late_limits (numpy.ndarray): 1D array of maximum late arrival allowances for each vessel.
+    - inbound_preparation_time (int): Preparation time for tugboats after completing inbound service (rho_in).
+    - outbound_preparation_time (int): Preparation time for tugboats after completing outbound service (rho_out).
+    - max_tugboats_per_service (int): Maximum number of tugboats allowed for a single service (Hmax).
+    - time_constraint_tolerance (float): Maximum allowed time deviation in timing constraints (epsilon_time).
+    - penalty_parameter (float): Large penalty parameter for unserved vessels.
+    - objective_weights (numpy.ndarray): 1D array of four weighting coefficients for objective function components.
+    - M (float): Large number parameter for penalties and logical relaxation.
+    - lambda_1 (float): Weight coefficient for unserved vessel penalty.
+    - lambda_2 (float): Weight coefficient for total port time cost.
+    - lambda_3 (float): Weight coefficient for ETA deviation cost.
+    - lambda_4 (float): Weight coefficient for tugboat utilization cost.
+    - epsilon_time (float): Time sequence constraint tolerance.
+    - rho_in (int): Tugboat preparation time after inbound service.
+    - rho_out (int): Tugboat preparation time after outbound service.
+    - tau_in (numpy.ndarray): 1D array of inbound tugboat service durations for each vessel.
+    - tau_out (numpy.ndarray): 1D array of outbound tugboat service durations for each vessel.
+    - alpha (numpy.ndarray): 1D array of priority weights for each vessel.
+    - beta (numpy.ndarray): 1D array of unit waiting costs for each vessel.
+    - gamma (numpy.ndarray): 1D array of JIT deviation unit costs for each vessel.
+    - c_k (numpy.ndarray): 1D array of unit time usage costs for each tugboat.
+    - P_k (numpy.ndarray): 1D array of horsepower for each tugboat.
+    - P_req (numpy.ndarray): 1D array of minimum tugboat horsepower required by each vessel.
+    - H_max (int): Maximum number of tugboats allowed for a single service.
+    - Delta_early (numpy.ndarray): 1D array of maximum early arrival allowances for each vessel.
+    - Delta_late (numpy.ndarray): 1D array of maximum late arrival allowances for each vessel.
+
+- solution:
+    - current_solution (Solution): Current solution instance.
+
+- key_item:
+    - total_scheduling_cost (float): The total scheduling cost of the current solution.
+
+- helper_function:
+    - get_problem_state (callable): def get_problem_state(solution: Solution) -> bool: The function to get the problem state for given solution without modify it.
+    - validation_solution (callable): def validation_solution(solution: Solution) -> bool: The function to check whether the solution is valid.
+
+- instance_problem_state:
+    ...
+
+- solution_problem_state:
+    ...
